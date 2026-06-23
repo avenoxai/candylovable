@@ -6,3 +6,5 @@
  */
 export * from './layout'
 export * from './juice'
+export * from './scene'
+export * from './board-controller'

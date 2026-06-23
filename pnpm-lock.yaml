@@ -90,6 +90,10 @@ importers:
       '@candylovable/contract':
         specifier: workspace:*
         version: link:../packages/contract
+    devDependencies:
+      '@candylovable/mocks':
+        specifier: workspace:*
+        version: link:../packages/mocks
 
   packages/contract: {}
 
