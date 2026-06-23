@@ -1,0 +1,61 @@
+/*
+ * candylovable design tokens — "Calm Studio, Playful Stage" (see reports/design-direction.md).
+ * Platform chrome only; the game canvas carries its own per-theme colour.
+ * Neutrals are one warm hue at varying lightness/alpha (OKLCH). Accent is rationed.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* warm-dark (default) */
+  --bg: oklch(0.17 0.012 70);
+  --surface: oklch(0.205 0.012 70);
+  --surface-2: oklch(0.245 0.012 70);
+  --border: oklch(0.32 0.012 70 / 0.55);
+  --text: oklch(0.93 0.012 80);
+  --text-muted: oklch(0.93 0.012 80 / 0.6);
+
+  /* rationed accent — purple → magenta, CTA + one hero moment only */
+  --accent: oklch(0.62 0.2 295);
+  --accent-2: oklch(0.66 0.22 350);
+  --accent-ink: oklch(0.99 0.01 300);
+  --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --focus: var(--accent);
+
+  /* typography */
+  --font-sans: 'Geist Variable', system-ui, -apple-system, sans-serif;
+
+  /* UI motion vocabulary (calm/snappy) */
+  --dur-instant: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  /* shape */
+  --radius: 12px;
+  --radius-pill: 9999px;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* parchment-light */
+  --bg: oklch(0.96 0.013 85);
+  --surface: oklch(0.99 0.006 85);
+  --surface-2: oklch(0.93 0.012 85);
+  --border: oklch(0.86 0.012 85);
+  --text: oklch(0.24 0.01 60);
+  --text-muted: oklch(0.24 0.01 60 / 0.62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-instant: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
