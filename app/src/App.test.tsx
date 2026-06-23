@@ -1,26 +1,19 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from './App'
+import { useUiStore } from './store/ui'
 
 afterEach(() => {
+  useUiStore.setState({ theme: 'dark' })
   document.documentElement.removeAttribute('data-theme')
 })
 
 describe('App', () => {
-  it('renders the product name and tagline', () => {
+  it('renders the builder workspace: brand, chat empty-state, and a preview', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: /candylovable/i })).toBeInTheDocument()
-    expect(screen.getByText(/watch it come to life/i)).toBeInTheDocument()
-  })
-
-  it('toggles the theme on the document element', () => {
-    render(<App />)
-    const btn = screen.getByRole('button', { name: /theme:/i })
-    expect(btn).toHaveTextContent(/dark/i)
-    fireEvent.click(btn)
-    expect(document.documentElement.dataset.theme).toBe('light')
-    expect(btn).toHaveTextContent(/light/i)
-    fireEvent.click(btn)
-    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(screen.getByText('candylovable')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /describe a puzzle game/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('live preview')).toBeInTheDocument()
+    expect(screen.getByLabelText('game board')).toBeInTheDocument()
   })
 })

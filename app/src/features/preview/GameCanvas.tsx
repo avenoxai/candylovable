@@ -1,6 +1,5 @@
 import type { GameDefinition } from '@candylovable/contract'
 import { type Scene, computeLayout, pixelToCell } from '@candylovable/game-runtime'
-import { PixiScene } from '@candylovable/game-runtime/pixi'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../design-system/primitives'
 import { GameHud } from './GameHud'
@@ -21,18 +20,26 @@ export const GameCanvas = ({ def }: { def: GameDefinition }) => {
     const canvas = canvasRef.current
     if (!canvas) return
     let disposed = false
-    const pixi = new PixiScene({ backgroundColor: def.theme.backdropColor })
-    pixi
-      .init(canvas, SIZE, SIZE)
-      .then(() => {
-        if (!disposed) setScene(pixi)
-      })
-      .catch(() => {
-        /* no WebGL (e.g. headless) — HUD still renders */
-      })
+    let live: { destroy(): void } | null = null
+    // Dynamic import keeps Pixi/WebGL out of the module graph for jsdom/SSR.
+    void (async () => {
+      try {
+        const { PixiScene } = await import('@candylovable/game-runtime/pixi')
+        const pixi = new PixiScene({ backgroundColor: def.theme.backdropColor })
+        await pixi.init(canvas, SIZE, SIZE)
+        if (disposed) {
+          pixi.destroy()
+          return
+        }
+        live = pixi
+        setScene(pixi)
+      } catch {
+        /* no WebGL (e.g. headless/jsdom) — HUD still renders */
+      }
+    })()
     return () => {
       disposed = true
-      pixi.destroy()
+      live?.destroy()
       setScene(null)
     }
   }, [def])
