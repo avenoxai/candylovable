@@ -60,6 +60,7 @@ export class BoardController {
 
   /** Seed from the engine's initial state: draw every tile. */
   seed(state: GameState): void {
+    this.scene.reset() // clear any prior sprites so re-seeding (e.g. after reset) is safe
     this.model = new Array<number | null>(state.cells.length).fill(null)
     this.idColor.clear()
     this.scene.resize(this.layout.width, this.layout.height)
