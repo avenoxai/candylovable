@@ -1,0 +1,3 @@
+packages:
+  - 'packages/*'
+  # app and game-runtime are added to the workspace as they are scaffolded

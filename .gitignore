@@ -14,9 +14,22 @@ dist/
 build/
 *.log
 
+# Test / tooling artifacts
+coverage/
+.vitest/
+playwright-report/
+test-results/
+.playwright/
+*.tsbuildinfo
+.turbo/
+
 # OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Agent working dirs (local-only, never committed)
+reports/
+loop/
