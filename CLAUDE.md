@@ -57,9 +57,14 @@ A platform for building **simple puzzle games** (match-3 first) from a constrain
 
 ### Active work (cross-agent tracking)
 - **Front-end** (agent `echo`): plan + living worklog at
-  [`reports/frontend-plan.md`](./reports/frontend-plan.md). Teammates track FE progress, the
-  scope split, and the **shared contract** (`GameDefinition` / `EngineEvent` / streaming /
-  postMessage bridge) there. Touch `lib/contract/*` only after coordinating.
+  [`reports/frontend-plan.md`](./reports/frontend-plan.md); decision register at
+  [`reports/decisions-frontend.md`](./reports/decisions-frontend.md). Teammates track FE progress
+  and the scope split there.
+- **Shared contract** is its own package: **`packages/contract`** (import `@candylovable/contract`),
+  `CONTRACT_VERSION = 1` — holds `GameDefinition`, `EngineInstance` + semantic `EngineEvent`,
+  `GenerationEvent` (SSE), and the postMessage bridge envelope. The `engine/` package implements
+  `EngineInstance` from here. Change it only after coordinating + logging in the worklog. FE
+  reference impl (fake-engine, fixtures) lives in `packages/mocks`.
 
 ## DeepSeek API
 
@@ -71,6 +76,13 @@ A platform for building **simple puzzle games** (match-3 first) from a constrain
   the visible answer.
 - **Fast/cheap model:** `deepseek-v4-flash`.
 - Verified reachable via `/models` + a `/chat/completions` ping (HTTP 200).
+- ⚠️ **Context caching is a core architecture invariant — see [`rules.md §7`](./rules.md)
+  (binding).** Caching is automatic & prefix-based (disk, 64-token chunks; hit = ~50×
+  cheaper on flash, ~120× on pro). **Freeze the prefix:** order every call
+  `system → tools → static context → [dynamic tail]`; nothing volatile (timestamps,
+  random examples, reordered tools) in the head or the cache busts for the whole system.
+  Agents on the model layer **must respect this.** Full playbook + pricing:
+  [`reports/2026-06-24-deepseek-context-caching.md`](./reports/2026-06-24-deepseek-context-caching.md).
 
 ## Engine core loop (reference)
 
