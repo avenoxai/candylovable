@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from './App'
+import { resetProjectStore } from './store/project'
 import { useUiStore } from './store/ui'
 
 afterEach(() => {
   useUiStore.setState({ theme: 'dark' })
   document.documentElement.removeAttribute('data-theme')
+  resetProjectStore()
 })
 
 describe('App', () => {

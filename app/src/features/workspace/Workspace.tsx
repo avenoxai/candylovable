@@ -1,35 +1,37 @@
-import type { GameDefinition } from '@candylovable/contract'
-import { sampleMatch3 } from '@candylovable/mocks'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import type { GenerationStreamFn } from '../../lib/api/sse'
+import { useProjectStore } from '../../store/project'
 import { ChatPanel } from '../chat/ChatPanel'
 import { useGeneration } from '../generation/useGeneration'
+import { VersionTimeline } from '../history/VersionTimeline'
 import { GameCanvas } from '../preview/GameCanvas'
 import { TopBar } from './TopBar'
 
 /**
- * The builder shell: chat (left) | live preview (right). The chat streams a
- * generation; when a game is ready it becomes the previewed GameDefinition.
+ * The builder shell: chat (left) | live preview (right), with a version strip.
+ * A finished generation is committed as a new checkpoint and becomes the preview.
  * `generate` is injectable for tests (defaults to the real SSE stream).
  */
 export const Workspace = ({ generate }: { generate?: GenerationStreamFn } = {}) => {
   const gen = useGeneration(generate)
-  const [def, setDef] = useState<GameDefinition>(sampleMatch3)
+  const current = useProjectStore((s) => s.current)
+  const commit = useProjectStore((s) => s.commit)
 
   useEffect(() => {
-    if (gen.def) setDef(gen.def)
-  }, [gen.def])
+    if (gen.def) commit(gen.def, gen.def.meta.title)
+  }, [gen.def, commit])
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar title={def.meta.title} />
+      <TopBar title={current.meta.title} />
+      <VersionTimeline />
       <div className="flex min-h-0 flex-1">
         <ChatPanel generation={gen} onGenerate={gen.start} onStop={gen.stop} />
         <main
           className="flex flex-1 items-center justify-center overflow-auto p-6"
           aria-label="live preview"
         >
-          <GameCanvas def={def} />
+          <GameCanvas def={current} />
         </main>
       </div>
     </div>

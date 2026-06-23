@@ -3,12 +3,14 @@ import { sampleMatch3 } from '@candylovable/mocks'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { GenerationStreamFn } from '../../lib/api/sse'
+import { resetProjectStore } from '../../store/project'
 import { useUiStore } from '../../store/ui'
 import { Workspace } from './Workspace'
 
 afterEach(() => {
   useUiStore.setState({ theme: 'dark' })
   document.documentElement.removeAttribute('data-theme')
+  resetProjectStore()
 })
 
 const fakeGenerate =
@@ -54,8 +56,12 @@ describe('Workspace', () => {
     fireEvent.change(screen.getByLabelText('prompt'), { target: { value: 'spooky ghost match' } })
     fireEvent.click(screen.getByRole('button', { name: /generate/i }))
 
-    // timeline shows the streamed step, and the preview title updates to the new game
+    // timeline shows the streamed step…
     await waitFor(() => expect(screen.getByText('Picking a look')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByText(/Spooky Ghosts/)).toBeInTheDocument())
+    // …and the finished game is committed as a version + becomes the preview
+    await waitFor(() =>
+      expect(screen.getByRole('navigation', { name: 'version history' })).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: /Spooky Ghosts/ })).toBeInTheDocument()
   })
 })
