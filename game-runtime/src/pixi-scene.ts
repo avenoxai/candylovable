@@ -36,9 +36,26 @@ export class PixiScene implements Scene {
     this.backgroundColor = opts.backgroundColor ? safeColor(opts.backgroundColor, 0x16140f) : 0x16140f
   }
 
-  async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
+  /**
+   * Mounts a fresh Pixi canvas INTO `host` (a container element) rather than
+   * binding to a pre-existing canvas. Each PixiScene owns its own canvas + WebGL
+   * context, so React StrictMode's double-mount can't init two Applications on one
+   * canvas and lose the context ("Could not initialize shader" / "context lost").
+   */
+  async init(host: HTMLElement, width: number, height: number): Promise<void> {
     const app = new Application()
-    await app.init({ canvas, width, height, antialias: true, background: this.backgroundColor })
+    await app.init({
+      width,
+      height,
+      antialias: true,
+      background: this.backgroundColor,
+      // autoDensity keeps the canvas crisp on HiDPI while sizing it to logical px
+      // (so pointer math in CSS pixels stays correct).
+      autoDensity: true,
+      resolution: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+    })
+    app.canvas.style.display = 'block'
+    host.appendChild(app.canvas)
     app.stage.addChild(this.board)
     app.stage.addChild(this.fx)
     app.ticker.add((t) => this.tweener.update(t.deltaMS))
@@ -173,6 +190,7 @@ export class PixiScene implements Scene {
 
   destroy(): void {
     this.reset()
+    // destroy(true) removes/destroys this app's own canvas (no shared-canvas churn).
     this.app?.destroy(true)
     this.app = undefined
   }

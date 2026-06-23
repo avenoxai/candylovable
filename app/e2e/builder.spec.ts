@@ -4,12 +4,10 @@ import { expect, test } from '@playwright/test'
  * End-to-end smoke in a real browser — the path jsdom can't run: the Pixi/WebGL
  * preview canvas + the MSW dev worker serving the live generation stream.
  *
- * ⚠️ Run on a real GPU: `pnpm test:e2e --headed` (or a CI runner with hardware
- * WebGL). Chromium's *headless-shell* can't compile Pixi v8's shaders — it logs
- * "Could not initialize shader" and the render loop stalls the page, so the
- * preview never settles. This isn't an app bug (PixiScene degrades gracefully and
- * 89 jsdom tests cover the React logic); it's a headless-WebGL limitation. Kept
- * out of the default `pnpm test` gate (vitest only runs src/**/*.test.*).
+ * Runs headless (no GPU flags needed). NOTE: each PixiScene mounts its own canvas
+ * so React StrictMode's double-mount can't lose the WebGL context — without that
+ * fix this stalls with "Could not initialize shader". Kept out of the default
+ * vitest gate (vitest only globs the unit test files under src).
  */
 test('builds a game end-to-end: prompt → stream → preview → select-and-edit', async ({ page }) => {
   const pageErrors: string[] = []
@@ -22,10 +20,10 @@ test('builds a game end-to-end: prompt → stream → preview → select-and-edi
   await expect(page.getByLabel('live preview')).toBeVisible()
   await expect(page.getByLabel('author panel')).toBeVisible()
 
-  // the live preview mounts a real Pixi canvas
-  const canvas = page.getByLabel('game board')
-  await expect(canvas).toBeVisible()
-  await expect(canvas).toHaveAttribute('width', '560')
+  // the live preview mounts a real Pixi canvas inside the board host
+  const board = page.getByLabel('game board')
+  await expect(board).toBeVisible()
+  await expect(board.locator('canvas')).toBeVisible({ timeout: 10_000 })
 
   // prompt → streamed generation (MSW worker) → committed version
   await page.getByLabel('prompt').fill('spooky ghost match game')

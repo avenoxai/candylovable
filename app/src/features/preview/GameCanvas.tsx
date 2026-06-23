@@ -13,20 +13,22 @@ const SIZE = 560
  * logic (input → swap, HUD) lives in the jsdom-tested useMatch3Session hook.
  */
 export const GameCanvas = ({ def }: { def: GameDefinition }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const hostRef = useRef<HTMLDivElement>(null)
   const [scene, setScene] = useState<Scene | null>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
+    const host = hostRef.current
+    if (!host) return
     let disposed = false
     let live: { destroy(): void } | null = null
     // Dynamic import keeps Pixi/WebGL out of the module graph for jsdom/SSR.
+    // PixiScene mounts its OWN canvas into `host`, so StrictMode's double-mount
+    // never inits two Applications on one canvas (which loses the GL context).
     void (async () => {
       try {
         const { PixiScene } = await import('@candylovable/game-runtime/pixi')
         const pixi = new PixiScene({ backgroundColor: def.theme.backdropColor })
-        await pixi.init(canvas, SIZE, SIZE)
+        await pixi.init(host, SIZE, SIZE)
         if (disposed) {
           pixi.destroy()
           return
@@ -48,7 +50,7 @@ export const GameCanvas = ({ def }: { def: GameDefinition }) => {
     viewport: { width: SIZE, height: SIZE },
   })
 
-  const handlePointer = (e: React.PointerEvent<HTMLCanvasElement>): void => {
+  const handlePointer = (e: React.PointerEvent<HTMLDivElement>): void => {
     const rect = e.currentTarget.getBoundingClientRect()
     const layout = computeLayout(def.board.width, def.board.height, SIZE, SIZE)
     const cell = pixelToCell(layout, e.clientX - rect.left, e.clientY - rect.top)
@@ -58,12 +60,12 @@ export const GameCanvas = ({ def }: { def: GameDefinition }) => {
   return (
     <div className="flex flex-col items-center gap-3">
       <GameHud hud={hud} />
-      <canvas
-        ref={canvasRef}
-        width={SIZE}
-        height={SIZE}
+      <div
+        ref={hostRef}
         onPointerDown={handlePointer}
-        className="touch-none rounded-[var(--radius)] border border-border"
+        style={{ width: SIZE, height: SIZE }}
+        className="touch-none overflow-hidden rounded-[var(--radius)] border border-border"
+        role="img"
         aria-label="game board"
         data-selected={selected ? `${selected.x},${selected.y}` : ''}
       />
