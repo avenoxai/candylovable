@@ -2,8 +2,9 @@ import type { GenerationEvent } from '@candylovable/contract'
 import { sampleMatch3 } from '@candylovable/mocks'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { GenerationStreamFn } from '../../lib/api/sse'
+import type { EditContext, GenerationStreamFn } from '../../lib/api/sse'
 import { resetProjectStore } from '../../store/project'
+import { resetSelectionStore } from '../../store/selection'
 import { useUiStore } from '../../store/ui'
 import { Workspace } from './Workspace'
 
@@ -11,6 +12,7 @@ afterEach(() => {
   useUiStore.setState({ theme: 'dark' })
   document.documentElement.removeAttribute('data-theme')
   resetProjectStore()
+  resetSelectionStore()
 })
 
 const fakeGenerate =
@@ -64,5 +66,28 @@ describe('Workspace', () => {
       expect(screen.getByRole('navigation', { name: 'version history' })).toBeInTheDocument(),
     )
     expect(screen.getByRole('button', { name: /Spooky Ghosts/ })).toBeInTheDocument()
+  })
+
+  it('select-and-edit: picking an entity scopes the next prompt to an iteration', async () => {
+    const calls: Array<{ prompt: string; context?: EditContext }> = []
+    const generate: GenerationStreamFn = async function* (prompt, _signal, context) {
+      calls.push({ prompt, context })
+      yield { type: 'gameReady', def: { ...sampleMatch3, id: 'edited' } }
+      yield { type: 'done' }
+    }
+    render(<Workspace generate={generate} />)
+
+    // pick the background to edit → a chip appears and the composer becomes "Update"
+    fireEvent.click(screen.getByRole('button', { name: /edit Background/i }))
+    expect(screen.getByText('Editing')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('prompt'), { target: { value: 'make it midnight blue' } })
+    fireEvent.click(screen.getByRole('button', { name: /update/i }))
+
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(calls[0]!.context).toMatchObject({ kind: 'background' })
+
+    // the finished edit consumes the selection (chip gone)
+    await waitFor(() => expect(screen.queryByText('Editing')).not.toBeInTheDocument())
   })
 })

@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import type { GenerationStreamFn } from '../../lib/api/sse'
+import type { EditContext, GenerationStreamFn } from '../../lib/api/sse'
 import { useProjectStore } from '../../store/project'
+import { useSelectionStore } from '../../store/selection'
 import { AuthorPanel } from '../author/AuthorPanel'
 import { ChatPanel } from '../chat/ChatPanel'
 import { useGeneration } from '../generation/useGeneration'
 import { VersionTimeline } from '../history/VersionTimeline'
+import { EditableElements } from '../preview/EditableElements'
 import { GameCanvas } from '../preview/GameCanvas'
 import { TopBar } from './TopBar'
 
@@ -17,22 +19,42 @@ export const Workspace = ({ generate }: { generate?: GenerationStreamFn } = {}) 
   const gen = useGeneration(generate)
   const current = useProjectStore((s) => s.current)
   const commit = useProjectStore((s) => s.commit)
+  const selected = useSelectionStore((s) => s.selected)
+  const clearSelection = useSelectionStore((s) => s.clear)
 
   useEffect(() => {
     if (gen.def) commit(gen.def, gen.def.meta.title)
   }, [gen.def, commit])
+
+  // A finished edit consumes the selection.
+  useEffect(() => {
+    if (gen.status === 'done') clearSelection()
+  }, [gen.status, clearSelection])
+
+  // A bare prompt generates a fresh game; a prompt with a selected entity iterates
+  // on the current one, scoped to that entity.
+  const generateOrIterate = (prompt: string, context?: EditContext): void => {
+    void gen.start(prompt, context ? { context, baseId: current.id } : {})
+  }
 
   return (
     <div className="flex h-full flex-col">
       <TopBar title={current.meta.title} />
       <VersionTimeline />
       <div className="flex min-h-0 flex-1">
-        <ChatPanel generation={gen} onGenerate={gen.start} onStop={gen.stop} />
+        <ChatPanel
+          generation={gen}
+          onGenerate={generateOrIterate}
+          onStop={gen.stop}
+          context={selected}
+          onClearContext={clearSelection}
+        />
         <main
-          className="flex flex-1 items-center justify-center overflow-auto p-6"
+          className="flex flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6"
           aria-label="live preview"
         >
           <GameCanvas def={current} />
+          <EditableElements def={current} />
         </main>
         <AuthorPanel />
       </div>

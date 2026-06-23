@@ -31,6 +31,25 @@ describe('useGeneration', () => {
     expect(result.current.steps.find((s) => s.id === 'r')?.done).toBe(true)
   })
 
+  it('forwards the edit context and baseId to the stream fn', async () => {
+    const seen: Array<{ context?: unknown; baseId?: unknown }> = []
+    const stream: GenerationStreamFn = async function* (_p, _signal, context, baseId) {
+      seen.push({ context, baseId })
+      yield { type: 'done' }
+    }
+    const { result } = renderHook(() => useGeneration(stream))
+    await act(async () => {
+      await result.current.start('make it spookier', {
+        context: { kind: 'tile', label: 'Tile 1', ref: '0' },
+        baseId: 'game-1',
+      })
+    })
+    expect(seen[0]).toEqual({
+      context: { kind: 'tile', label: 'Tile 1', ref: '0' },
+      baseId: 'game-1',
+    })
+  })
+
   it('cancels when stop() is called mid-stream', async () => {
     const stream: GenerationStreamFn = async function* (_p, signal) {
       yield { type: 'plan', steps: [] }

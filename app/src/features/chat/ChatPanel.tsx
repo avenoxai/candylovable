@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button, PromptComposer } from '../../design-system/primitives'
+import type { EditContext } from '../../lib/api/sse'
 import { ActionTimeline } from '../generation/ActionTimeline'
 import type { GenerationState } from '../generation/reducer'
 
@@ -32,18 +33,47 @@ const EmptyState = ({ onPick }: { onPick: (v: string) => void }) => (
 
 export interface ChatPanelProps {
   generation: GenerationState
-  onGenerate: (prompt: string) => void
+  onGenerate: (prompt: string, context?: EditContext) => void
   onStop: () => void
+  /** Selected preview entity to scope an edit (select-and-edit), if any. */
+  context?: EditContext | null
+  onClearContext?: () => void
 }
 
+const ContextChip = ({ context, onClear }: { context: EditContext; onClear?: () => void }) => (
+  <div
+    className="flex items-center gap-2 rounded-full border border-accent bg-accent/10 px-3 py-1 text-xs text-ink"
+    role="status"
+  >
+    <span className="text-muted">Editing</span>
+    <span className="font-medium">{context.label}</span>
+    {onClear && (
+      <button
+        type="button"
+        aria-label="clear selection"
+        onClick={onClear}
+        className="rounded-full px-1 text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus)]"
+      >
+        ✕
+      </button>
+    )}
+  </div>
+)
+
 /** Chat lane: empty-state until the first prompt, then the streaming timeline. */
-export const ChatPanel = ({ generation, onGenerate, onStop }: ChatPanelProps) => {
+export const ChatPanel = ({
+  generation,
+  onGenerate,
+  onStop,
+  context,
+  onClearContext,
+}: ChatPanelProps) => {
   const [value, setValue] = useState('')
   const streaming = generation.status === 'streaming'
   const submit = (): void => {
     const prompt = value.trim()
     if (prompt) {
-      onGenerate(prompt)
+      onGenerate(prompt, context ?? undefined)
       setValue('')
     }
   }
@@ -60,12 +90,16 @@ export const ChatPanel = ({ generation, onGenerate, onStop }: ChatPanelProps) =>
           <ActionTimeline state={generation} onStop={onStop} />
         )}
       </div>
+      {context && <ContextChip context={context} onClear={onClearContext} />}
       <PromptComposer
         value={value}
         onChange={setValue}
         onSubmit={submit}
         disabled={streaming}
-        placeholder="e.g. a fruit match-3 with bombs"
+        submitLabel={context ? 'Update' : 'Generate'}
+        placeholder={
+          context ? `Describe a change to the ${context.label.toLowerCase()}…` : 'e.g. a fruit match-3 with bombs'
+        }
       />
     </aside>
   )
