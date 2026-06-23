@@ -7,8 +7,17 @@ import { App } from './App'
 const root = document.getElementById('root')
 if (!root) throw new Error('#root element not found')
 
-createRoot(root).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+const render = (): void => {
+  createRoot(root).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  )
+}
+
+// In dev, boot the MSW worker first so the generation pipeline is mocked end-to-end.
+if (import.meta.env.DEV) {
+  void import('./mocks/browser').then(({ startMockWorker }) => startMockWorker().then(render))
+} else {
+  render()
+}
