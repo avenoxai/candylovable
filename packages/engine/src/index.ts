@@ -9,8 +9,11 @@
  *     (decisions-echo ECHO-D8).
  *
  * Full plan + phases: reports/backend-plan.md · decisions: reports/decisions-backend.md.
- * STATUS: P1 in progress — board primitives + RNG landed; Engine class + sim API next.
+ * STATUS: P1 — Engine class (cascade + score/collect goals + shuffle) landed;
+ * specials (P2) + analyzeLevel sim oracle (P3) next.
  */
 
 export * from './rng'
 export * from './board'
+export * from './solver'
+export * from './engine'

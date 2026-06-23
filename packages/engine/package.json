@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "@candylovable/contract": "workspace:*"
+  },
+  "devDependencies": {
+    "@candylovable/mocks": "workspace:*"
   }
 }
