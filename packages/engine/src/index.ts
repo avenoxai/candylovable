@@ -9,8 +9,8 @@
  *     (decisions-echo ECHO-D8).
  *
  * Full plan + phases: reports/backend-plan.md · decisions: reports/decisions-backend.md.
- * STATUS: P1 — Engine class (cascade + score/collect goals + shuffle) landed;
- * specials (P2) + analyzeLevel sim oracle (P3) next.
+ * STATUS: P3 — Engine core + specials + the `analyzeLevel` validation oracle all
+ * landed + tested. Server (P4+) hosts this; deepseek-infra calls `analyzeLevel`.
  */
 
 export * from './rng'
@@ -18,3 +18,4 @@ export * from './board'
 export * from './solver'
 export * from './specials'
 export * from './engine'
+export * from './analyze'
