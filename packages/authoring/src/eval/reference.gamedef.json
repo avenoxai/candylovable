@@ -93,23 +93,17 @@
   "theme": {
     "id": "candy",
     "displayName": "Candy",
-    "tileset": {
-      "source": "themes/candy/_sheet.png",
-      "prefix": "tile_candy",
-      "key": "magenta",
-      "size": 256,
-      "count": 6,
-      "assets": [
-        { "file": "tile_candy_00.png", "index": 0, "colorId": 0, "bbox": [0, 0, 256, 256], "description": "glossy red heart-shaped candy with a white top highlight" },
-        { "file": "tile_candy_01.png", "index": 1, "colorId": 1, "bbox": [0, 0, 256, 256], "description": "glossy blue round gem-candy" },
-        { "file": "tile_candy_02.png", "index": 2, "colorId": 2, "bbox": [0, 0, 256, 256], "description": "green wrapped twist sweet" },
-        { "file": "tile_candy_03.png", "index": 3, "colorId": 3, "bbox": [0, 0, 256, 256], "description": "glossy yellow five-point star candy" },
-        { "file": "tile_candy_04.png", "index": 4, "colorId": 4, "bbox": [0, 0, 256, 256], "description": "glossy purple oval lozenge candy" },
-        { "file": "tile_candy_05.png", "index": 5, "colorId": 5, "bbox": [0, 0, 256, 256], "description": "glossy orange jelly bean" }
-      ]
-    },
-    "assetBaseUrl": "/assets/themes/candy/",
-    "background": "linear-gradient(180deg, #ffd9ec 0%, #c8a2ff 100%)",
+    "assetBaseUrl": "/assets",
+    "background": "themes/candy/bg_candy.png",
+    "backdropColor": "linear-gradient(180deg, #ffd9ec 0%, #c8a2ff 100%)",
+    "tiles": [
+      { "colorId": 0, "file": "themes/candy/tile_candy_00.png", "description": "glossy red heart-shaped candy with a white top highlight" },
+      { "colorId": 1, "file": "themes/candy/tile_candy_01.png", "description": "glossy blue round gem-candy" },
+      { "colorId": 2, "file": "themes/candy/tile_candy_02.png", "description": "green wrapped twist sweet" },
+      { "colorId": 3, "file": "themes/candy/tile_candy_03.png", "description": "glossy yellow five-point star candy" },
+      { "colorId": 4, "file": "themes/candy/tile_candy_04.png", "description": "glossy purple oval lozenge candy" },
+      { "colorId": 5, "file": "themes/candy/tile_candy_05.png", "description": "glossy orange jelly bean" }
+    ],
     "palette": ["#ff4d6d", "#3d9bff", "#3fc06a", "#ffd23f", "#a77bff", "#ff8a3d"]
   },
   "audio": {
