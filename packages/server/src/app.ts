@@ -137,6 +137,36 @@ export const createApp = (deps: AppDeps): Hono => {
     })
   })
 
+  // Projects + version history (the FE's undo / branch / publish surfaces read these).
+  app.get('/api/projects', async (c) => c.json(await deps.store.listProjects()))
+
+  app.get('/api/projects/:id', async (c) => {
+    const project = await deps.store.getProject(c.req.param('id'))
+    return project ? c.json(project) : c.json({ error: 'project not found' }, 404)
+  })
+
+  app.get('/api/projects/:id/versions', async (c) => {
+    const id = c.req.param('id')
+    if (!(await deps.store.getProject(id))) return c.json({ error: 'project not found' }, 404)
+    return c.json(await deps.store.listVersions(id))
+  })
+
+  app.get('/api/projects/:id/versions/:n', async (c) => {
+    const n = Number(c.req.param('n'))
+    if (!Number.isInteger(n)) return c.json({ error: 'bad version number' }, 400)
+    const version = await deps.store.getVersion(c.req.param('id'), n)
+    return version ? c.json(version) : c.json({ error: 'version not found' }, 404)
+  })
+
+  // Non-destructive restore/branch: clone version n as a new current version.
+  app.post('/api/projects/:id/restore/:n', async (c) => {
+    const id = c.req.param('id')
+    const n = Number(c.req.param('n'))
+    if (!Number.isInteger(n)) return c.json({ error: 'bad version number' }, 400)
+    if (!(await deps.store.getVersion(id, n))) return c.json({ error: 'version not found' }, 404)
+    return c.json(await deps.store.restoreVersion(id, n))
+  })
+
   // Static tile/bg/shared PNGs. Path-traversal guarded (stays within assetRoot).
   app.get('/assets/*', (c) => {
     const rel = decodeURIComponent(c.req.path.slice('/assets/'.length))

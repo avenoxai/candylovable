@@ -4,9 +4,9 @@
  * project/version/session persistence + an ad-hoc `/api/validate` over the engine oracle.
  *
  * Plan: reports/backend-plan.md · decisions: reports/decisions-backend.md.
- * STATUS: P5 — generate/iterate SSE mounted on the AuthoringPort (FakeAuthoring stand-in,
- * BE-D10) with session/project/version persistence. Serving + Store from P4. Projects/
- * versions read+restore routes (P6) and real-authoring wiring (P8) next.
+ * STATUS: P6 — serving + generate/iterate SSE + projects/versions read+restore, all on
+ * MemoryStore/JsonFileStore. Real @candylovable/authoring wiring (P8) is the remaining
+ * gated step; P7 (runtime blockers) waits on CONTRACT_VERSION 2.
  */
 export * from './app'
 export * from './authoring'
