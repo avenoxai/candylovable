@@ -22,6 +22,12 @@
   --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
   --focus: var(--accent);
 
+  /* status (meaning never by colour alone — always pair with icon/text) */
+  --success: oklch(0.72 0.16 150);
+  --warning: oklch(0.8 0.15 85);
+  --danger: oklch(0.64 0.21 25);
+  --info: oklch(0.7 0.13 230);
+
   /* typography */
   --font-sans: 'Geist Variable', system-ui, -apple-system, sans-serif;
 
