@@ -93,7 +93,7 @@ describe('generate (scripted bench — the P3 eval checkpoint)', () => {
   it('emits a recoverable=false error when the model never produces a valid game', async () => {
     const events = []
     for await (const e of generate('x', {
-      client: new FakeDeepSeek([turn([])]), // model says nothing actionable
+      client: new FakeDeepSeek([turn([]), turn([])]), // model only ever replies in prose
       proPrefix: prefix(),
       catalog: candyCatalog(),
     })) {

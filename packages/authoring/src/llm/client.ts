@@ -26,6 +26,8 @@ export interface ChatMessage {
   content: string
   /** Set on `role:'tool'` messages to correlate with the originating call. */
   toolCallId?: string
+  /** Set on `role:'assistant'` messages that called tools (required before tool results). */
+  toolCalls?: ToolCall[]
 }
 
 /** Token accounting from one model call. `cacheHit/Miss` drive the cost model (rules.md §7). */

@@ -266,6 +266,7 @@ export function buildTools(): Tool[] {
         const board = ctx.draft.def.board
         const levels = ctx.draft.def.levels
         if (!board || !levels?.length) return fail('set_board + author_level before simulating')
+        if (index < 0 || index >= levels.length) return fail(`level ${index} does not exist yet (have ${levels.length}); author it first`)
         const simDef = {
           schemaVersion: 1,
           id: 'sim',

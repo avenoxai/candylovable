@@ -40,11 +40,18 @@ export class HttpDeepSeekClient implements DeepSeekClient {
     const doFetch = this.opts.fetchImpl ?? fetch
     const body: Record<string, unknown> = {
       model: MODEL_SLUG[req.model],
-      messages: req.messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-        ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
-      })),
+      messages: req.messages.map((m) => {
+        const out: Record<string, unknown> = { role: m.role, content: m.content }
+        if (m.toolCallId) out.tool_call_id = m.toolCallId
+        if (m.toolCalls && m.toolCalls.length > 0) {
+          out.tool_calls = m.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: 'function',
+            function: { name: tc.name, arguments: JSON.stringify(tc.arguments) },
+          }))
+        }
+        return out
+      }),
       stream: false,
     }
     if (req.tools && req.tools.length > 0) {

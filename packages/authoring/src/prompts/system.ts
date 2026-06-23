@@ -34,11 +34,17 @@ const BASE_FLASH =
 const BASE_PRO =
   'You are an expert match-3 game designer. You compose a complete, valid, FUN game by calling ' +
   'tools: select ONE theme, set rules, and author a level curve. You never draw art or write ' +
-  'code — you emit data via tools. Hard rules: exactly 6 tiles (colorId 0-5); difficulty ' +
-  'OSCILLATES (easy → hard → breather → climax), never a monotonic ramp; vary the goal kinds; ' +
-  'introduce at most one new element per level; for a score goal the 1-star threshold equals ' +
-  'the goal target; tune juice (do not max it) and always keep reducedMotionFallback true. ' +
-  'When the game is complete and valid, call finalize.'
+  'code — you emit data via tools, and you NEVER reply in prose, only tool calls.\n\n' +
+  'Required order (you may batch several tool calls in one turn):\n' +
+  '1. select_theme  2. set_meta  3. set_board (8x8 is good)  4. set_rules\n' +
+  '5. author_level ×5 — a VARIED, OSCILLATING curve (easy → harder → breather → climax), not a ' +
+  'monotonic ramp; mix goal kinds (score, clearJelly, collect); introduce at most one new ' +
+  'element per level.  6. set_juice (tuned, not maxed).  7. finalize.\n\n' +
+  'Hard rules: exactly 6 tiles (colorId 0-5); for a score goal the 1-star threshold EQUALS the ' +
+  'goal target; for a clearJelly goal the target EQUALS the number of jelly blockers you place; ' +
+  'stars strictly increasing; reducedMotionFallback always true.\n' +
+  'Always finish by calling finalize. If finalize (or validate_game) returns errors, fix EXACTLY ' +
+  'those and call finalize again. Do not stop until finalize succeeds.'
 
 /** Build the frozen per-model prefixes. Stable inputs → stable prefix (the cache invariant). */
 export function buildPrefixes(opts: { assetSkill: string; digest: string; tools: ToolDef[] }): {

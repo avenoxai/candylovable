@@ -6,7 +6,7 @@ import type { StepLogger } from '../obs/logger'
 import { type FrozenPrefix, assembleRequest } from '../prompts/assemble'
 import { assembleDraft } from '../tools/finalize'
 import { buildToolRegistry } from '../tools/tools'
-import { type ToolContext, fail, newDraft } from '../tools/types'
+import { type ToolContext, type ToolResult, fail, newDraft } from '../tools/types'
 import type { EngineFactory } from '../validate/simulate-level'
 import { ev } from './events'
 
@@ -22,6 +22,8 @@ export interface GenerateDeps {
   clock?: () => number
   /** Hard cap on model rounds — also bounds the repair loop. */
   maxRounds?: number
+  /** Optional observer of each tool execution (diagnostics / tiering). */
+  onTool?: (name: string, ok: boolean, errors?: string[]) => void
 }
 
 const STEP_KIND: Record<string, 'design' | 'rules' | 'level' | 'theme' | 'asset'> = {
@@ -44,7 +46,7 @@ const STEP_KIND: Record<string, 'design' | 'rules' | 'level' | 'theme' | 'asset'
 export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenerator<GenerationEvent> {
   const { client, proPrefix, catalog, makeEngine, logger } = deps
   const clock = deps.clock ?? (() => 0)
-  const maxRounds = deps.maxRounds ?? 24
+  const maxRounds = deps.maxRounds ?? 36
   const runId = deps.runId ?? 'run'
   const { tools } = buildToolRegistry()
   const ctx: ToolContext = { draft: newDraft(), catalog, makeEngine }
@@ -54,6 +56,7 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
 
   let finalized: GameDefinition | undefined
   let stepIndex = 0
+  let noToolStreak = 0
 
   for (let round = 0; round < maxRounds && !finalized; round++) {
     const startedAt = clock()
@@ -77,12 +80,31 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
 
     if (result.toolCalls.length === 0) {
       if (result.content) yield ev.token(result.content)
-      break
+      if (finalized) break
+      // The model answered in prose instead of acting. Nudge it back to tools; give up only
+      // if it does this twice in a row (otherwise maxRounds would burn on empty turns).
+      noToolStreak += 1
+      if (noToolStreak >= 2) break
+      messages.push({ role: 'assistant', content: result.content })
+      messages.push({ role: 'user', content: 'Keep going — use tools to complete the game, then call finalize. Do not reply in prose.' })
+      continue
     }
+    noToolStreak = 0
+
+    // Record the assistant's tool calls BEFORE their results (OpenAI/DeepSeek protocol).
+    messages.push({ role: 'assistant', content: result.content, toolCalls: result.toolCalls })
 
     for (const call of result.toolCalls) {
-      const tool = tools.get(call.name)
-      const res = tool ? tool.handler(call.arguments, ctx) : fail(`unknown tool ${call.name}`)
+      let res: ToolResult
+      try {
+        const tool = tools.get(call.name)
+        res = tool ? tool.handler(call.arguments, ctx) : fail(`unknown tool ${call.name}`)
+      } catch (e) {
+        // A tool throwing must not crash generation — turn it into a recoverable error the
+        // model can fix next round. The weak model WILL misuse tools; resilience is the point.
+        res = fail(`tool ${call.name} failed: ${e instanceof Error ? e.message : String(e)}`)
+      }
+      deps.onTool?.(call.name, res.ok, res.ok ? undefined : res.errors)
       yield ev.step(call.name, call.name, 'done', STEP_KIND[call.name] ?? 'design')
       if (Object.keys(ctx.draft.def).length > 0) yield ev.partial(ctx.draft.def)
       if (call.name === 'finalize' && res.ok) finalized = res.data as GameDefinition

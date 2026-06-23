@@ -1,4 +1,4 @@
-import type { GameDefinition } from '@candylovable/contract'
+import type { Blocker, GameDefinition } from '@candylovable/contract'
 import type { AssetCatalog } from '../assets/catalog'
 import type { ValidationError } from '../validate/validate-game'
 import { validateGame } from '../validate/validate-game'
@@ -44,6 +44,48 @@ export function assembleDraft(draft: DraftState, catalog?: AssetCatalog): Assemb
     juice: d.juice!,
   }
 
+  normalizeGame(def)
   const errors = validateGame(def, catalog)
   return errors.length > 0 ? { errors } : { def, errors: [] }
+}
+
+/**
+ * Infra-does-the-work: fix the deterministic, mechanical invariants the (weak) model
+ * shouldn't have to nail by hand — so it can focus on DESIGN (curve, goals, juice) while we
+ * guarantee consistency. We only normalise things with one correct answer; we never invent
+ * difficulty or solvability (those stay the model's job and are graded by the rubric).
+ */
+function normalizeGame(def: GameDefinition): void {
+  const { width, height } = def.board
+  def.levels.forEach((lvl, i) => {
+    lvl.index = i // contiguous from 0
+    if (lvl.goal.kind === 'score' && lvl.stars) lvl.stars[0] = lvl.goal.target // 1-star == score target
+    if (lvl.goal.kind === 'clearJelly') {
+      // The model asked for a jelly level but may not have placed (enough) jelly. Materialise
+      // its intent: auto-place jelly blockers to match the target, then align the count.
+      const blockers = lvl.blockers ?? []
+      const jellyCount = blockers.filter((b) => b.kind === 'jelly').length
+      const target = lvl.goal.target > 0 ? lvl.goal.target : 9
+      if (jellyCount < target) {
+        const occupied = new Set(blockers.map((b) => `${b.at.x},${b.at.y}`))
+        const added: Blocker[] = []
+        for (let cell = 0; cell < width * height && jellyCount + added.length < target; cell++) {
+          const x = cell % width
+          const y = Math.floor(cell / width)
+          if (!occupied.has(`${x},${y}`)) {
+            added.push({ at: { x, y }, kind: 'jelly', layers: 1 })
+            occupied.add(`${x},${y}`)
+          }
+        }
+        lvl.blockers = [...blockers, ...added]
+        lvl.goal.target = jellyCount + added.length
+      } else {
+        lvl.goal.target = jellyCount
+      }
+    }
+    if (lvl.stars) {
+      if (lvl.stars[1] <= lvl.stars[0]) lvl.stars[1] = lvl.stars[0] + 1
+      if (lvl.stars[2] <= lvl.stars[1]) lvl.stars[2] = lvl.stars[1] + 1
+    }
+  })
 }
