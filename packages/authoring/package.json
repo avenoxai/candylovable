@@ -1,0 +1,16 @@
+{
+  "name": "@candylovable/authoring",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@candylovable/contract": "workspace:*",
+    "@candylovable/mocks": "workspace:*"
+  }
+}

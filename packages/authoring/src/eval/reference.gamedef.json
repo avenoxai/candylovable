@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "id": "bench-candy-cascade-v1",
+  "meta": {
+    "title": "Candy Cascade",
+    "gameType": "match3"
+  },
+  "board": {
+    "width": 8,
+    "height": 8,
+    "cellTypes": [
+      { "colorId": 0, "label": "red heart" },
+      { "colorId": 1, "label": "blue gem" },
+      { "colorId": 2, "label": "green twist" },
+      { "colorId": 3, "label": "yellow star" },
+      { "colorId": 4, "label": "purple lozenge" },
+      { "colorId": 5, "label": "orange jelly bean" }
+    ]
+  },
+  "rules": {
+    "minMatch": 3,
+    "allowDiagonal": false,
+    "specials": [
+      { "match": "line4", "creates": "striped-h" },
+      { "match": "line5", "creates": "colorBomb" },
+      { "match": "tShape", "creates": "wrapped" },
+      { "match": "lShape", "creates": "wrapped" }
+    ],
+    "scoring": {
+      "baseClear": 60,
+      "cascadeMultiplier": "linear",
+      "specialCreateBonus": {
+        "striped-h": 120,
+        "wrapped": 200,
+        "colorBomb": 300
+      }
+    }
+  },
+  "levels": [
+    {
+      "index": 0,
+      "goal": { "kind": "score", "target": 1500 },
+      "moveLimit": 25,
+      "stars": [1500, 3000, 4500]
+    },
+    {
+      "index": 1,
+      "goal": { "kind": "score", "target": 3500 },
+      "moveLimit": 22,
+      "stars": [3500, 5500, 8000]
+    },
+    {
+      "index": 2,
+      "goal": { "kind": "clearJelly", "target": 12 },
+      "moveLimit": 20,
+      "blockers": [
+        { "at": { "x": 2, "y": 3 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 3, "y": 3 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 4, "y": 3 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 5, "y": 3 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 2, "y": 4 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 3, "y": 4 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 4, "y": 4 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 5, "y": 4 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 2, "y": 5 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 3, "y": 5 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 4, "y": 5 }, "kind": "jelly", "layers": 1 },
+        { "at": { "x": 5, "y": 5 }, "kind": "jelly", "layers": 1 }
+      ],
+      "stars": [4000, 6500, 9000]
+    },
+    {
+      "index": 3,
+      "goal": { "kind": "collect", "target": 20, "collectColorId": 0 },
+      "moveLimit": 26,
+      "stars": [3000, 5000, 7000]
+    },
+    {
+      "index": 4,
+      "goal": { "kind": "score", "target": 7000 },
+      "moveLimit": 20,
+      "blockers": [
+        { "at": { "x": 0, "y": 0 }, "kind": "crate", "layers": 1 },
+        { "at": { "x": 7, "y": 0 }, "kind": "crate", "layers": 1 },
+        { "at": { "x": 0, "y": 7 }, "kind": "crate", "layers": 1 },
+        { "at": { "x": 7, "y": 7 }, "kind": "crate", "layers": 1 },
+        { "at": { "x": 3, "y": 3 }, "kind": "crate", "layers": 2 },
+        { "at": { "x": 4, "y": 4 }, "kind": "crate", "layers": 2 }
+      ],
+      "stars": [7000, 10500, 14000]
+    }
+  ],
+  "theme": {
+    "id": "candy",
+    "displayName": "Candy",
+    "tileset": {
+      "source": "themes/candy/_sheet.png",
+      "prefix": "tile_candy",
+      "key": "magenta",
+      "size": 256,
+      "count": 6,
+      "assets": [
+        { "file": "tile_candy_00.png", "index": 0, "colorId": 0, "bbox": [0, 0, 256, 256], "description": "glossy red heart-shaped candy with a white top highlight" },
+        { "file": "tile_candy_01.png", "index": 1, "colorId": 1, "bbox": [0, 0, 256, 256], "description": "glossy blue round gem-candy" },
+        { "file": "tile_candy_02.png", "index": 2, "colorId": 2, "bbox": [0, 0, 256, 256], "description": "green wrapped twist sweet" },
+        { "file": "tile_candy_03.png", "index": 3, "colorId": 3, "bbox": [0, 0, 256, 256], "description": "glossy yellow five-point star candy" },
+        { "file": "tile_candy_04.png", "index": 4, "colorId": 4, "bbox": [0, 0, 256, 256], "description": "glossy purple oval lozenge candy" },
+        { "file": "tile_candy_05.png", "index": 5, "colorId": 5, "bbox": [0, 0, 256, 256], "description": "glossy orange jelly bean" }
+      ]
+    },
+    "assetBaseUrl": "/assets/themes/candy/",
+    "background": "linear-gradient(180deg, #ffd9ec 0%, #c8a2ff 100%)",
+    "palette": ["#ff4d6d", "#3d9bff", "#3fc06a", "#ffd23f", "#a77bff", "#ff8a3d"]
+  },
+  "audio": {
+    "pack": "candy",
+    "cues": {
+      "swap": "/assets/audio/candy/swap.mp3",
+      "match": "/assets/audio/candy/match.mp3",
+      "cascade": "/assets/audio/candy/cascade.mp3",
+      "specialCreate": "/assets/audio/candy/special_create.mp3",
+      "specialDetonate": "/assets/audio/candy/special_detonate.mp3",
+      "win": "/assets/audio/candy/win.mp3",
+      "lose": "/assets/audio/candy/lose.mp3"
+    }
+  },
+  "juice": {
+    "particles": 0.7,
+    "screenShake": 0.25,
+    "squashStretch": 0.6,
+    "cascadePitch": 0.85,
+    "reducedMotionFallback": true
+  }
+}
