@@ -21,12 +21,14 @@ export const GameHud = ({ hud }: { hud: HudState }) => {
         <span className="text-muted">Moves </span>
         <span className="font-semibold tabular-nums">{hud.movesLeft ?? '∞'}</span>
       </div>
-      <div className="flex items-center gap-2" aria-label={`${GOAL_LABEL[hud.goalKind]} goal progress`}>
+      <div className="flex items-center gap-2">
         <span className="text-muted">{GOAL_LABEL[hud.goalKind]}</span>
         <div
           className="h-2 w-24 overflow-hidden rounded-full bg-surface-2"
           role="progressbar"
+          aria-label={`${GOAL_LABEL[hud.goalKind]} goal progress`}
           aria-valuenow={pct}
+          aria-valuetext={`${pct}%`}
           aria-valuemin={0}
           aria-valuemax={100}
         >

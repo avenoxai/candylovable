@@ -1,5 +1,9 @@
 import '@testing-library/jest-dom/vitest'
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
+import 'vitest-axe/extend-expect'
+import * as axeMatchers from 'vitest-axe/matchers'
+
+expect.extend(axeMatchers)
 
 // jsdom has no matchMedia; provide a default (no reduced-motion) stub.
 if (typeof window.matchMedia !== 'function') {

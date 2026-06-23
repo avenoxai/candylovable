@@ -15,9 +15,11 @@
   --text: oklch(0.93 0.012 80);
   --text-muted: oklch(0.93 0.012 80 / 0.6);
 
-  /* rationed accent — purple → magenta, CTA + one hero moment only */
-  --accent: oklch(0.62 0.2 295);
-  --accent-2: oklch(0.66 0.22 350);
+  /* rationed accent — purple → magenta, CTA + one hero moment only.
+     L held at 0.56 so near-white --accent-ink clears WCAG 4.5:1 on solid + gradient
+     fills (text-sm buttons = normal text); still ≥3:1 as a focus ring on bg/surface. */
+  --accent: oklch(0.56 0.2 295);
+  --accent-2: oklch(0.56 0.22 350);
   --accent-ink: oklch(0.99 0.01 300);
   --accent-gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
   --focus: var(--accent);
@@ -54,7 +56,8 @@
   --surface-2: oklch(0.93 0.012 85);
   --border: oklch(0.86 0.012 85);
   --text: oklch(0.24 0.01 60);
-  --text-muted: oklch(0.24 0.01 60 / 0.62);
+  /* alpha 0.85 (not 0.62) so muted text composites to ≥4.5:1 over parchment bg. */
+  --text-muted: oklch(0.24 0.01 60 / 0.85);
 }
 
 @media (prefers-reduced-motion: reduce) {
