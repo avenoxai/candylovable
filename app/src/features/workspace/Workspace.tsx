@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import type { GenerationStreamFn } from '../../lib/api/sse'
 import { useProjectStore } from '../../store/project'
+import { AuthorPanel } from '../author/AuthorPanel'
 import { ChatPanel } from '../chat/ChatPanel'
 import { useGeneration } from '../generation/useGeneration'
 import { VersionTimeline } from '../history/VersionTimeline'
@@ -33,6 +34,7 @@ export const Workspace = ({ generate }: { generate?: GenerationStreamFn } = {}) 
         >
           <GameCanvas def={current} />
         </main>
+        <AuthorPanel />
       </div>
     </div>
   )

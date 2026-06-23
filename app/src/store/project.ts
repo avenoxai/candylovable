@@ -16,6 +16,8 @@ interface ProjectState {
   commit: (def: GameDefinition, label: string) => void
   /** Restore a past checkpoint as the current preview. */
   restore: (id: number) => void
+  /** Live-edit the current preview without recording a checkpoint (author panel). */
+  setCurrent: (def: GameDefinition) => void
 }
 
 const INITIAL: Checkpoint = { id: 1, label: 'Initial board', def: sampleMatch3 }
@@ -34,6 +36,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const cp = get().history.find((h) => h.id === id)
     if (cp) set({ current: cp.def, currentId: id })
   },
+  setCurrent: (def) => set({ current: def }),
 }))
 
 /** Test helper: reset the store to its initial single-checkpoint state. */

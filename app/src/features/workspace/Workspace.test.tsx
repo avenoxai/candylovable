@@ -20,11 +20,12 @@ const fakeGenerate =
   }
 
 describe('Workspace', () => {
-  it('lays out the chat and the live preview', () => {
+  it('lays out the chat, the live preview, and the author panel', () => {
     render(<Workspace />)
     expect(screen.getByLabelText('builder chat')).toBeInTheDocument()
     expect(screen.getByLabelText('live preview')).toBeInTheDocument()
     expect(screen.getByLabelText('game board')).toBeInTheDocument()
+    expect(screen.getByLabelText('author panel')).toBeInTheDocument()
   })
 
   it('toggles the theme from the top bar', () => {
