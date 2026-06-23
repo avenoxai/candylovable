@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@candylovable/contract": "workspace:*"
+    "@candylovable/contract": "workspace:*",
+    "msw": "^2.7.0"
   }
 }
