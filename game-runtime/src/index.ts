@@ -8,3 +8,5 @@ export * from './layout'
 export * from './juice'
 export * from './scene'
 export * from './board-controller'
+export * from './tween'
+// PixiScene is browser-only — import it via '@candylovable/game-runtime/pixi'.

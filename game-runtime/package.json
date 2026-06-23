@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./pixi": "./src/pixi-scene.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@candylovable/contract": "workspace:*"
+    "@candylovable/contract": "workspace:*",
+    "pixi.js": "^8.5.0"
   },
   "devDependencies": {
     "@candylovable/mocks": "workspace:*"
