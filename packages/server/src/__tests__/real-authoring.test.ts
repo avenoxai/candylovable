@@ -60,4 +60,21 @@ describe('RealAuthoring (server adapter)', () => {
     for await (const e of ra.iterate({ sessionId: 's', message: 'm' }, { ...deps(), session: {} as never })) events.push(e)
     expect(events[0]?.type).toBe('error')
   })
+
+  it('accumulates per-generation cost into a running total (the /api/cost badge)', async () => {
+    const USAGE = { promptTokens: 1000, cacheHitTokens: 0, cacheMissTokens: 1000, completionTokens: 500, reasoningTokens: 0 }
+    const costScript = (): ScriptedTurn[] => script().map((t) => ({ result: { ...t.result, usage: USAGE } }))
+    const ra = new RealAuthoring({ apiKey: 'x', assetSkill: 'S', library: candyLib(), client: new FakeDeepSeek([...costScript(), ...costScript()]) })
+
+    for (const _round of [0, 1]) {
+      for await (const _e of ra.generate({ prompt: 'make a candy game' }, deps())) {
+        /* drain the stream so the post-stream cost accounting runs */
+      }
+    }
+
+    const snap = ra.costSnapshot()
+    expect(snap.generations).toBe(2)
+    expect(snap.totalUSD).toBeGreaterThan(0)
+    expect(snap.lastUSD).toBeGreaterThan(0)
+  })
 })

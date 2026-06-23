@@ -26,6 +26,8 @@ const main = (): void => {
     : undefined
 
   const app = createApp({ store, assetRoot: cfg.assetRoot, library, authoring })
+  // Surface cumulative DeepSeek spend (the FE shows it as a running-cost badge).
+  if (authoring) app.get('/api/cost', (c) => c.json(authoring.costSnapshot()))
   serve({ fetch: app.fetch, port: cfg.port })
   // eslint-disable-next-line no-console
   console.log(`candylovable server on :${cfg.port} — authoring: ${authoring ? 'DeepSeek (real)' : 'Fake (set DEEPSEEK_API_KEY for real)'}`)

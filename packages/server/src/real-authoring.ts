@@ -1,6 +1,7 @@
 import {
   type DeepSeekClient,
   type LibraryJson,
+  MemoryStepLogger,
   type Pipeline,
   createPipeline,
   generate,
@@ -31,9 +32,20 @@ export interface RealAuthoringConfig {
  * solvability. Goals are constrained to score+collect — clearJelly/bringDown + runtime
  * blockers await CONTRACT_VERSION 2 (BE-D7/D8), so every generated game is engine-winnable.
  */
+export interface CostSnapshot {
+  /** Cumulative USD across all generations since server start. */
+  totalUSD: number
+  generations: number
+  /** Cost of the most recent generation. */
+  lastUSD: number
+}
+
 export class RealAuthoring implements AuthoringPort {
   private readonly pipeline: Pipeline
   private readonly maxRounds: number
+  private totalUSD = 0
+  private generations = 0
+  private lastUSD = 0
 
   constructor(cfg: RealAuthoringConfig) {
     this.pipeline = createPipeline({
@@ -48,6 +60,7 @@ export class RealAuthoring implements AuthoringPort {
   }
 
   async *generate(input: GenerateInput, deps: AuthoringDeps): AsyncIterable<GenerationEvent> {
+    const logger = new MemoryStepLogger()
     yield* generate(input.prompt, {
       client: this.pipeline.client,
       proPrefix: this.pipeline.proPrefix,
@@ -57,7 +70,19 @@ export class RealAuthoring implements AuthoringPort {
       runId: deps.ids(),
       maxRounds: this.maxRounds,
       signal: deps.signal,
+      logger,
     })
+    // Runs once the stream is fully drained — accumulate this generation's spend.
+    this.lastUSD = logger.totalCostUSD()
+    this.totalUSD += this.lastUSD
+    this.generations += 1
+    // eslint-disable-next-line no-console
+    console.log(`[cost] generation $${this.lastUSD.toFixed(5)} · total $${this.totalUSD.toFixed(5)} (${this.generations} gens)`)
+  }
+
+  /** Running cost — exposed via GET /api/cost for the FE badge. */
+  costSnapshot(): CostSnapshot {
+    return { totalUSD: this.totalUSD, generations: this.generations, lastUSD: this.lastUSD }
   }
 
   async *iterate(_input: IterateInput, _deps: AuthoringDeps & { session: Session }): AsyncIterable<GenerationEvent> {
