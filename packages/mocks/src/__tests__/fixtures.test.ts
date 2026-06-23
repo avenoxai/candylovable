@@ -42,4 +42,19 @@ describe('gemsTheme ↔ assets/library.json seam', () => {
       entry.tiles.forEach((t, i) => expect(t.colorId, `theme ${id} tile ${i}`).toBe(i))
     }
   })
+
+  it('exposes the shared assets the renderer maps engine enums onto', () => {
+    const lib = loadLibrary()
+    const names = (xs: { name: string }[]) => xs.map((x) => x.name)
+    expect(names(lib.shared.overlay)).toEqual(
+      expect.arrayContaining(['fx_special_striped', 'fx_special_wrapped']),
+    )
+    expect(names(lib.shared.blocker)).toEqual(
+      expect.arrayContaining(['blocker_ice', 'blocker_jelly', 'blocker_crate', 'blocker_lock']),
+    )
+    expect(names(lib.shared.particle)).toEqual(
+      expect.arrayContaining(['fx_particle_spark', 'fx_particle_star', 'fx_particle_ring']),
+    )
+    expect(names(lib.shared.texture_9slice).length).toBeGreaterThanOrEqual(4)
+  })
 })

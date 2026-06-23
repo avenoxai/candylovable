@@ -78,9 +78,31 @@ export interface AssetThemeEntry {
   tiles: AssetTile[]
 }
 
+/** A named, theme-agnostic shared asset (special overlay, blocker, texture, particle). */
+export interface SharedAsset {
+  /** Stable name, e.g. `fx_special_striped`, `blocker_ice`, `tex_button`, `fx_particle_spark`. */
+  name: string
+  /** Path relative to `assets/`. */
+  file: string
+  description?: string
+}
+
+/** Theme-agnostic shared assets in `assets/library.json`. */
+export interface AssetSharedSection {
+  /** Special-tile overlays: `fx_special_<striped|wrapped|bomb|color>`. */
+  overlay: SharedAsset[]
+  /** Cell obstacles: `blocker_<ice|jelly|crate|lock>`. */
+  blocker: SharedAsset[]
+  /** 9-slice UI/board skins: `tex_<button|panel|frame|slot>`. */
+  texture_9slice: SharedAsset[]
+  /** Particle sprites the renderer tints/blends: `fx_particle_<spark|star|ring>`. */
+  particle: SharedAsset[]
+}
+
 /**
  * The shared asset catalog — owned by the assets/visual lane (`assets/library.json`).
- * The renderer resolves a {@link ThemeTokens} from one theme entry here.
+ * The renderer resolves a {@link ThemeTokens} from one theme entry, and maps engine
+ * enums (`SpecialKind`, blocker kind) onto {@link AssetSharedSection} entries.
  */
 export interface AssetLibrary {
   version: number
@@ -89,6 +111,7 @@ export interface AssetLibrary {
   /** Asset kind, e.g. `whole_sprite`. */
   kind: string
   themes: Record<string, AssetThemeEntry>
+  shared: AssetSharedSection
 }
 
 /** Resolved theme the renderer uses: one library entry + display name + accent palette. */
