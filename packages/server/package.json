@@ -11,6 +11,7 @@
     "dev": "node --experimental-strip-types src/main.ts"
   },
   "dependencies": {
+    "@candylovable/authoring": "workspace:*",
     "@candylovable/contract": "workspace:*",
     "@candylovable/engine": "workspace:*",
     "@hono/node-server": "^1.13.7",

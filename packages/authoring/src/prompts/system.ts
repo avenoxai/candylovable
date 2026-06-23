@@ -38,22 +38,28 @@ const BASE_PRO =
   'Required order (you may batch several tool calls in one turn):\n' +
   '1. select_theme  2. set_meta  3. set_board (8x8 is good)  4. set_rules\n' +
   '5. author_level ×5 — a VARIED, OSCILLATING curve (easy → harder → breather → climax), not a ' +
-  'monotonic ramp; mix goal kinds (score, clearJelly, collect); introduce at most one new ' +
+  'monotonic ramp; mix goal kinds — use ONLY these: {GOALS}; introduce at most one new ' +
   'element per level.  6. set_juice (tuned, not maxed).  7. finalize.\n\n' +
   'Hard rules: exactly 6 tiles (colorId 0-5); for a score goal the 1-star threshold EQUALS the ' +
-  'goal target; for a clearJelly goal the target EQUALS the number of jelly blockers you place; ' +
-  'stars strictly increasing; reducedMotionFallback always true.\n' +
+  'goal target; stars strictly increasing; reducedMotionFallback always true.\n' +
   'Always finish by calling finalize. If finalize (or validate_game) returns errors, fix EXACTLY ' +
   'those and call finalize again. Do not stop until finalize succeeds.'
 
-/** Build the frozen per-model prefixes. Stable inputs → stable prefix (the cache invariant). */
-export function buildPrefixes(opts: { assetSkill: string; digest: string; tools: ToolDef[] }): {
-  flash: FrozenPrefix
-  pro: FrozenPrefix
-} {
+/**
+ * Build the frozen per-model prefixes. Stable inputs → stable prefix (the cache invariant).
+ * `goalKinds` constrains which goals the model may use — defaults to the full set; backend
+ * v1 integration passes `['score','collect']` (clearJelly/bringDown need CONTRACT_VERSION 2).
+ */
+export function buildPrefixes(opts: {
+  assetSkill: string
+  digest: string
+  tools: ToolDef[]
+  goalKinds?: readonly string[]
+}): { flash: FrozenPrefix; pro: FrozenPrefix } {
+  const goals = (opts.goalKinds ?? ['score', 'collect', 'clearJelly']).join(', ')
   const context = `\n\n## Asset library — how to use it\n${opts.assetSkill}\n\n## Catalog\n${opts.digest}`
   return {
     flash: { system: BASE_FLASH + context, tools: opts.tools },
-    pro: { system: BASE_PRO + context, tools: opts.tools },
+    pro: { system: BASE_PRO.replace('{GOALS}', goals) + context, tools: opts.tools },
   }
 }

@@ -6,6 +6,7 @@
  * backend hosts the HTTP routes. Built phase-by-phase per `loop/deepseek-infra/PRD.md`.
  */
 export * from './config'
+export * from './integration'
 export * from './llm/client'
 export * from './llm/fake'
 export * from './llm/http'

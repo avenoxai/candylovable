@@ -24,6 +24,8 @@ export interface GenerateDeps {
   maxRounds?: number
   /** Optional observer of each tool execution (diagnostics / tiering). */
   onTool?: (name: string, ok: boolean, errors?: string[]) => void
+  /** Aborts the run when the client disconnects (the FE stop button). */
+  signal?: AbortSignal
 }
 
 const STEP_KIND: Record<string, 'design' | 'rules' | 'level' | 'theme' | 'asset'> = {
@@ -59,6 +61,7 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
   let noToolStreak = 0
 
   for (let round = 0; round < maxRounds && !finalized; round++) {
+    if (deps.signal?.aborted) return // client disconnected — stop streaming
     const startedAt = clock()
     const result = await client.chat(assembleRequest('pro', proPrefix, { messages }))
 
