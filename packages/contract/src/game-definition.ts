@@ -64,10 +64,16 @@ export interface AssetTile {
   description?: string
 }
 
+/** A background image in the asset catalog (`bg_<theme>`). */
+export interface AssetBackground {
+  /** Path relative to `assets/`. */
+  file: string
+  description?: string
+}
+
 /** A theme entry in `assets/library.json`. */
 export interface AssetThemeEntry {
-  /** Background image path relative to `assets/` (`bg_<theme>`). */
-  background: string
+  background: AssetBackground
   /** Six tiles, index === colorId (0–5). */
   tiles: AssetTile[]
 }

@@ -29,7 +29,7 @@ describe('gemsTheme ↔ assets/library.json seam', () => {
     const lib = loadLibrary()
     const entry = lib.themes.gems
     expect(entry).toBeDefined()
-    expect(gemsTheme.background).toBe(entry!.background)
+    expect(gemsTheme.background).toBe(entry!.background.file)
     expect(gemsTheme.tiles.map((t) => t.file)).toEqual(entry!.tiles.map((t) => t.file))
     expect(gemsTheme.tiles.map((t) => t.colorId)).toEqual(entry!.tiles.map((t) => t.colorId))
   })
