@@ -8,6 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8787'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: 5180,
     // FE calls relative /api/* and /assets/* (see lib/api/sse.ts); proxy them to the
     // backend so `VITE_USE_MOCKS=false pnpm dev` runs the full real chain in-browser.
     proxy: {

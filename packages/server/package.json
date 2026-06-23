@@ -8,8 +8,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "tsx watch src/main.ts",
-    "start": "tsx src/main.ts"
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/main.ts"
   },
   "dependencies": {
     "@candylovable/authoring": "workspace:*",
@@ -19,6 +19,7 @@
     "hono": "^4.12.0"
   },
   "devDependencies": {
-    "@candylovable/mocks": "workspace:*"
+    "@candylovable/mocks": "workspace:*",
+    "tsx": "^4.22.4"
   }
 }

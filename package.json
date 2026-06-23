@@ -8,6 +8,8 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "concurrently -k -n backend,frontend -c blue,magenta \"pnpm --filter @candylovable/server dev\" \"VITE_USE_MOCKS=false pnpm --filter @candylovable/app dev\"",
+    "dev:mock": "pnpm --filter @candylovable/app dev",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm -r --if-present typecheck",
@@ -15,7 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.22.4",
+    "concurrently": "^10.0.3",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }
