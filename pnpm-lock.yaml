@@ -148,6 +148,10 @@ importers:
       hono:
         specifier: ^4.12.0
         version: 4.12.27
+    devDependencies:
+      '@candylovable/mocks':
+        specifier: workspace:*
+        version: link:../mocks
 
 packages:
 

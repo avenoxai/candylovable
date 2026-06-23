@@ -1,0 +1,22 @@
+{
+  "name": "@candylovable/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "node --experimental-strip-types src/main.ts"
+  },
+  "dependencies": {
+    "@candylovable/contract": "workspace:*",
+    "@candylovable/engine": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.12.0"
+  },
+  "devDependencies": {
+    "@candylovable/mocks": "workspace:*"
+  }
+}

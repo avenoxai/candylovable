@@ -1,0 +1,2 @@
+# JsonFileStore dev persistence (runtime data, never committed)
+.data/
