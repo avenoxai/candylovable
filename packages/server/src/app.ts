@@ -4,6 +4,7 @@ import { resolve, sep } from 'node:path'
 import { CONTRACT_VERSION, type GameDefinition } from '@candylovable/contract'
 import { analyzeGame, analyzeLevel } from '@candylovable/engine'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import type { AuthoringDeps, AuthoringPort, GenerateInput, IterateInput } from './authoring'
 import { FakeAuthoring } from './fake-authoring'
 import { resolveThemes } from './library'
@@ -24,6 +25,17 @@ export interface AppDeps {
   ids?: () => string
   now?: () => number
   rng?: () => number
+  /** CORS allowed origin(s) for the FE↔BE seam. Defaults to '*' (dev); pass `false` to disable. */
+  corsOrigins?: string | string[] | false
+  /** Structured per-request log sink (also where authoring's cache-hit KPI surfaces). */
+  logger?: (entry: RequestLog) => void
+}
+
+export interface RequestLog {
+  method: string
+  path: string
+  status: number
+  ms: number
 }
 
 const CONTENT_TYPE: Record<string, string> = {
@@ -60,6 +72,19 @@ export const createApp = (deps: AppDeps): Hono => {
     library: deps.library,
     signal,
   })
+
+  // --- cross-cutting middleware (registered before routes) ---
+  if (deps.corsOrigins !== false) app.use('*', cors({ origin: deps.corsOrigins ?? '*' }))
+  const logger = deps.logger
+  if (logger) {
+    app.use('*', async (c, next) => {
+      const start = now()
+      await next()
+      logger({ method: c.req.method, path: c.req.path, status: c.res.status, ms: now() - start })
+    })
+  }
+  app.onError((err, c) => c.json({ error: err.message || 'internal error' }, 500))
+  app.notFound((c) => c.json({ error: 'not found', path: c.req.path }, 404))
 
   app.get('/api/health', (c) => c.json({ ok: true, contractVersion: CONTRACT_VERSION }))
 

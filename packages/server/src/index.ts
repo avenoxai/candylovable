@@ -4,9 +4,10 @@
  * project/version/session persistence + an ad-hoc `/api/validate` over the engine oracle.
  *
  * Plan: reports/backend-plan.md · decisions: reports/decisions-backend.md.
- * STATUS: P6 — serving + generate/iterate SSE + projects/versions read+restore, all on
- * MemoryStore/JsonFileStore. Real @candylovable/authoring wiring (P8) is the remaining
- * gated step; P7 (runtime blockers) waits on CONTRACT_VERSION 2.
+ * STATUS: P6 + P8-hardening — serving + generate/iterate SSE + projects/versions, plus
+ * CORS / request logging / error handler / graceful SSE error. GATED: real
+ * @candylovable/authoring wiring (its API is still moving) and P7 runtime blockers
+ * (CONTRACT_VERSION 2). FakeAuthoring stays mounted until the adapter lands.
  */
 export * from './app'
 export * from './authoring'

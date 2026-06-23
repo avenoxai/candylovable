@@ -17,9 +17,20 @@ export const streamGeneration = (
   c.header('X-Accel-Buffering', 'no')
   c.header('Cache-Control', 'no-cache, no-transform')
   return streamSSE(c, async (stream) => {
-    for await (const e of gen) {
-      if (onEvent) await onEvent(e)
-      await stream.writeSSE({ event: e.type, data: JSON.stringify(e) })
+    try {
+      for await (const e of gen) {
+        if (onEvent) await onEvent(e)
+        await stream.writeSSE({ event: e.type, data: JSON.stringify(e) })
+      }
+    } catch (err) {
+      // A pipeline failure becomes a contract `error` event, then the stream closes
+      // cleanly — the FE shows it instead of a dead connection. Nothing is persisted.
+      const event: GenerationEvent = {
+        type: 'error',
+        message: (err as Error)?.message ?? 'generation failed',
+        recoverable: false,
+      }
+      await stream.writeSSE({ event: 'error', data: JSON.stringify(event) })
     }
   })
 }
