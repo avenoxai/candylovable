@@ -16,4 +16,5 @@
 export * from './rng'
 export * from './board'
 export * from './solver'
+export * from './specials'
 export * from './engine'

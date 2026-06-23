@@ -10,6 +10,8 @@ import {
   type Move,
   type MoveResult,
   type Unsubscribe,
+  coordKey,
+  fromIndex,
   isAdjacent,
   toIndex,
 } from '@candylovable/contract'
@@ -22,6 +24,15 @@ import {
 } from './board'
 import { hashString, makeIdFactory, mulberry32, type Rng } from './rng'
 import { findAvailableMoves, hasAvailableMove, shuffleBoard } from './solver'
+import {
+  type Activation,
+  type BlastCtx,
+  blastCells,
+  chooseAnchor,
+  detectActivation,
+  resolveSpecialKind,
+  unkey,
+} from './specials'
 
 /** Seed derivation shared with the FakeEngine so identical defs produce identical boards. */
 export const seedFor = (gameId: string, levelIndex: number): number =>
@@ -124,6 +135,20 @@ export class Engine implements EngineInstance {
     if (!isAdjacent(a, b)) return { accepted: false, reason: 'not-adjacent' }
 
     const minMatch = this.def.rules.minMatch
+    const ta = cells[toIndex(a.x, a.y, width)] as Cell
+    const tb = cells[toIndex(b.x, b.y, width)] as Cell
+
+    // Special-activation swaps (colorBomb, or two specials) are valid moves even
+    // without a normal 3-match — the detonation IS the move.
+    const activation = detectActivation(ta, tb, a, b)
+    if (activation) {
+      this.emit({ type: 'swap', a, b, accepted: true })
+      this.state.movesUsed++
+      this.resolveActivation(activation)
+      this.evaluateGoalAndEnd()
+      return { accepted: true }
+    }
+
     this.swapCells(cells, a, b)
     if (findMatches(cells, width, height, minMatch).length === 0) {
       this.swapCells(cells, a, b)
@@ -133,7 +158,7 @@ export class Engine implements EngineInstance {
 
     this.emit({ type: 'swap', a, b, accepted: true })
     this.state.movesUsed++
-    this.resolveCascades()
+    this.resolveCascades({ lastSwap: { a, b } })
     this.evaluateGoalAndEnd()
     return { accepted: true }
   }
@@ -159,37 +184,156 @@ export class Engine implements EngineInstance {
     return m ** (cascadeLevel - 1)
   }
 
-  /** The cascade loop. Emits semantic events; the renderer turns them into juice. */
-  private resolveCascades(): void {
+  /**
+   * The cascade loop. Emits semantic events; the renderer turns them into juice.
+   * Event order is preserved from P1 (`match → clear → score → gravity → refill`)
+   * with `spawnSpecial` woven in after its match and `specialDetonate` before the
+   * `clear`. With `rules.specials: []` no special ever spawns, so the trace is
+   * byte-identical to the FakeEngine (BE-D5 parity).
+   *
+   * `seedClears` injects an initial cleared set (from an activation swap);
+   * `preDetonated` marks specials already emitted so the chain doesn't double-fire.
+   */
+  private resolveCascades(
+    opts: { lastSwap?: Move; seedClears?: Set<string>; preDetonated?: Set<string> } = {},
+  ): void {
     const { width, height } = this.state
     const cells = this.state.cells
     const minMatch = this.def.rules.minMatch
     const colorCount = this.def.board.cellTypes.length
     const base = this.def.rules.scoring.baseClear
     let cascadeLevel = 0
+    let seed = opts.seedClears
+    let lastSwap = opts.lastSwap
+    const detonated = opts.preDetonated ?? new Set<string>()
 
     for (;;) {
       const groups = findMatches(cells, width, height, minMatch)
-      if (groups.length === 0) break
+      const haveSeed = seed !== undefined && seed.size > 0
+      if (groups.length === 0 && !haveSeed) break
       cascadeLevel++
 
-      const cleared: Coord[] = []
+      const cleared = new Set<string>()
+      if (seed) {
+        for (const k of seed) cleared.add(k)
+        seed = undefined
+      }
+      const spawned = new Set<string>()
+      let bonus = 0
+
       for (const g of groups) {
         this.emit({ type: 'match', cells: g.cells, shape: g.shape, size: g.size })
-        cleared.push(...g.cells)
+        const kind = resolveSpecialKind(g, this.def.rules.specials)
+        if (kind) {
+          const anchor = chooseAnchor(g, width, lastSwap)
+          const anchorKey = coordKey(anchor)
+          const tile = cells[toIndex(anchor.x, anchor.y, width)]
+          if (tile) tile.special = kind
+          spawned.add(anchorKey)
+          this.emit({ type: 'spawnSpecial', at: anchor, kind })
+          bonus += this.def.rules.scoring.specialCreateBonus[kind] ?? 0
+          for (const c of g.cells) {
+            const k = coordKey(c)
+            if (k !== anchorKey) cleared.add(k)
+          }
+        } else {
+          for (const c of g.cells) cleared.add(coordKey(c))
+        }
       }
-      this.emit({ type: 'clear', cells: cleared, cascadeLevel })
+      lastSwap = undefined
 
-      const delta = Math.round(cleared.length * base * this.multiplier(cascadeLevel))
+      this.detonateChain(cleared, spawned, detonated)
+
+      const clearedCoords = [...cleared].map(unkey)
+      this.emit({ type: 'clear', cells: clearedCoords, cascadeLevel })
+
+      const delta = Math.round(clearedCoords.length * base * this.multiplier(cascadeLevel)) + bonus
       this.state.score += delta
       this.emit({ type: 'score', delta, total: this.state.score, cascadeLevel })
-      this.trackGoalProgress(cleared)
+      this.trackGoalProgress(clearedCoords)
 
-      clearCells(cells, cleared, width)
+      clearCells(cells, clearedCoords, width)
       const moves = applyGravity(cells, width, height)
       if (moves.length) this.emit({ type: 'gravity', moves })
       const added = refill(cells, width, height, colorCount, this.rng, this.nextId)
       if (added.length) this.emit({ type: 'refill', cells: added })
+    }
+  }
+
+  /** Set up the cleared set + detonate events for a special-activation swap, then cascade. */
+  private resolveActivation(act: Activation): void {
+    const { width, height } = this.state
+    const cells = this.state.cells
+    const seedClears = new Set<string>()
+    const preDetonated = new Set<string>()
+
+    if (act.kind === 'bomb-bomb') {
+      const cleared: Coord[] = []
+      for (let i = 0; i < cells.length; i++) {
+        if (cells[i]) {
+          const c = fromIndex(i, width)
+          cleared.push(c)
+          seedClears.add(coordKey(c))
+        }
+      }
+      this.emit({ type: 'specialDetonate', origin: act.aAt, cleared, kind: 'colorBomb' })
+      preDetonated.add(coordKey(act.aAt))
+      preDetonated.add(coordKey(act.bAt))
+    } else if (act.kind === 'bomb-color') {
+      const cleared: Coord[] = []
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const c = cells[toIndex(x, y, width)]
+          if (c && c.special !== 'colorBomb' && c.colorId === act.color) {
+            cleared.push({ x, y })
+            seedClears.add(coordKey({ x, y }))
+          }
+        }
+      }
+      cleared.push(act.bombAt)
+      seedClears.add(coordKey(act.bombAt))
+      this.emit({ type: 'specialDetonate', origin: act.bombAt, cleared, kind: 'colorBomb' })
+      preDetonated.add(coordKey(act.bombAt))
+    } else {
+      seedClears.add(coordKey(act.aAt))
+      seedClears.add(coordKey(act.bAt))
+    }
+
+    this.resolveCascades({ seedClears, preDetonated })
+  }
+
+  /**
+   * Detonate every special caught in `cleared` (and the chain it triggers), adding
+   * each blast's cells to `cleared`. `spawned` (freshly created this tick) and
+   * `detonated` (already fired) are excluded so nothing detonates twice.
+   */
+  private detonateChain(cleared: Set<string>, spawned: Set<string>, detonated: Set<string>): void {
+    const { width, height } = this.state
+    const cells = this.state.cells
+    const ctx: BlastCtx = { width, height, cells, rng: this.rng }
+
+    const work: string[] = []
+    for (const k of cleared) {
+      const c = unkey(k)
+      const tile = cells[toIndex(c.x, c.y, width)]
+      if (tile?.special && !spawned.has(k) && !detonated.has(k)) work.push(k)
+    }
+
+    while (work.length) {
+      const k = work.pop() as string
+      if (detonated.has(k)) continue
+      const origin = unkey(k)
+      const tile = cells[toIndex(origin.x, origin.y, width)]
+      if (!tile?.special) continue
+      detonated.add(k)
+      const blast = blastCells(tile.special, origin, ctx)
+      this.emit({ type: 'specialDetonate', origin, cleared: blast, kind: tile.special })
+      for (const c of blast) {
+        const ck = coordKey(c)
+        cleared.add(ck)
+        const ct = cells[toIndex(c.x, c.y, width)]
+        if (ct?.special && !detonated.has(ck) && !spawned.has(ck)) work.push(ck)
+      }
     }
   }
 
