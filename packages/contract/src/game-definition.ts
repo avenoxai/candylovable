@@ -54,39 +54,50 @@ export interface LevelDef {
 }
 
 /**
- * One tile sprite within a theme tileset. Mirrors the on-disk asset manifest
- * at `assets/themes/<id>/tile_<id>.manifest.json` produced by the asset pipeline.
+ * One tile in the SHARED asset catalog (`assets/library.json`, owned by the
+ * assets/visual lane). Asset file naming is a hard contract: `tile_<theme>_NN`.
  */
-export interface ThemeTileAsset {
-  file: string
-  index: number
+export interface AssetTile {
   colorId: number
-  /** [x0, y0, x1, y1] in source-sheet pixels. */
-  bbox: [number, number, number, number]
-  area_px?: number
+  /** Path relative to `assets/` (e.g. `themes/gems/tile_gems_00.png`). */
+  file: string
   description?: string
 }
 
-export interface ThemeManifest {
-  source: string
-  prefix: string
-  /** Chroma key color used when the sheet was sliced. */
-  key: string
-  size: number
-  count: number
-  assets: ThemeTileAsset[]
+/** A theme entry in `assets/library.json`. */
+export interface AssetThemeEntry {
+  /** Background image path relative to `assets/` (`bg_<theme>`). */
+  background: string
+  /** Six tiles, index === colorId (0–5). */
+  tiles: AssetTile[]
 }
 
+/**
+ * The shared asset catalog — owned by the assets/visual lane (`assets/library.json`).
+ * The renderer resolves a {@link ThemeTokens} from one theme entry here.
+ */
+export interface AssetLibrary {
+  version: number
+  /** Source sprite size in px (currently 256). */
+  tile_size: number
+  /** Asset kind, e.g. `whole_sprite`. */
+  kind: string
+  themes: Record<string, AssetThemeEntry>
+}
+
+/** Resolved theme the renderer uses: one library entry + display name + accent palette. */
 export interface ThemeTokens {
   id: string
   displayName: string
-  /** Resolved tile manifest (the candy-replacement art). */
-  tileset: ThemeManifest
-  /** Base URL the tile PNGs are served from. */
+  /** Base URL the asset `file` paths are resolved against (e.g. `/assets`). */
   assetBaseUrl: string
-  /** CSS color/gradient behind the board. */
+  /** Background image path (relative to {@link assetBaseUrl}). */
   background: string
-  /** Per-colorId accent (for particles/glow), hex or OKLCH. */
+  /** Optional CSS color/gradient behind the (transparent) tiles. */
+  backdropColor?: string
+  /** Tile sprites; `tiles[colorId]` is the art for that colour. */
+  tiles: AssetTile[]
+  /** Per-colorId accent for particles/glow (renderer-side; not in the catalog). */
   palette: string[]
 }
 
