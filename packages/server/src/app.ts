@@ -1,9 +1,13 @@
+import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { resolve, sep } from 'node:path'
 import { CONTRACT_VERSION, type GameDefinition } from '@candylovable/contract'
-import { analyzeGame } from '@candylovable/engine'
+import { analyzeGame, analyzeLevel } from '@candylovable/engine'
 import { Hono } from 'hono'
+import type { AuthoringDeps, AuthoringPort, GenerateInput, IterateInput } from './authoring'
+import { FakeAuthoring } from './fake-authoring'
 import { resolveThemes } from './library'
+import { streamGeneration } from './sse'
 import type { Store } from './store/store'
 
 export interface AppDeps {
@@ -12,8 +16,14 @@ export interface AppDeps {
   assetRoot: string
   /** Parsed `library.json` (raw — served verbatim). */
   library: unknown
+  /** Generation pipeline host; defaults to FakeAuthoring until @candylovable/authoring lands (BE-D10). */
+  authoring?: AuthoringPort
   /** Defaults to the engine's analyzeGame; injectable for tests. */
   analyze?: typeof analyzeGame
+  /** Edge providers (volatility lives here, not in core — BE-D6). */
+  ids?: () => string
+  now?: () => number
+  rng?: () => number
 }
 
 const CONTENT_TYPE: Record<string, string> = {
@@ -35,8 +45,21 @@ const CONTENT_TYPE: Record<string, string> = {
 export const createApp = (deps: AppDeps): Hono => {
   const app = new Hono()
   const analyze = deps.analyze ?? analyzeGame
+  const authoring = deps.authoring ?? new FakeAuthoring()
+  const ids = deps.ids ?? (() => randomUUID())
+  const now = deps.now ?? (() => Date.now())
+  const rng = deps.rng ?? Math.random
   const themes = resolveThemes(deps.library)
   const assetBase = resolve(deps.assetRoot)
+
+  const authoringDeps = (signal: AbortSignal): AuthoringDeps => ({
+    ids,
+    now,
+    rng,
+    analyzeLevel,
+    library: deps.library,
+    signal,
+  })
 
   app.get('/api/health', (c) => c.json({ ok: true, contractVersion: CONTRACT_VERSION }))
 
@@ -63,6 +86,55 @@ export const createApp = (deps: AppDeps): Hono => {
     } catch (e) {
       return c.json({ error: (e as Error).message }, 400)
     }
+  })
+
+  // Generation: mount the authoring pipeline as an SSE stream. Opens a session, and on
+  // `gameReady` persists the def as a new project (v1). The session id is returned in a
+  // header so the FE can drive `/api/iterate`.
+  app.post('/api/generate', async (c) => {
+    let body: GenerateInput
+    try {
+      body = (await c.req.json()) as GenerateInput
+    } catch {
+      return c.json({ error: 'invalid JSON body' }, 400)
+    }
+    if (!body?.prompt || typeof body.prompt !== 'string') return c.json({ error: 'missing `prompt`' }, 400)
+
+    const session = await deps.store.createSession()
+    const gen = authoring.generate({ prompt: body.prompt }, authoringDeps(c.req.raw.signal))
+    c.header('X-Session-Id', session.id)
+    return streamGeneration(c, gen, async (e) => {
+      if (e.type === 'gameReady') {
+        await deps.store.setSessionDef(session.id, e.def)
+        const { project } = await deps.store.createProject(e.def.meta.title, e.def)
+        await deps.store.setSessionProject(session.id, project.id)
+      }
+    })
+  })
+
+  // Iteration: load the session, stream the targeted edit, and on `gameReady` append a
+  // turn + a new project version (the version-history UI reads these).
+  app.post('/api/iterate', async (c) => {
+    let body: IterateInput
+    try {
+      body = (await c.req.json()) as IterateInput
+    } catch {
+      return c.json({ error: 'invalid JSON body' }, 400)
+    }
+    if (!body?.sessionId || !body?.message) return c.json({ error: 'missing `sessionId`/`message`' }, 400)
+    const session = await deps.store.getSession(body.sessionId)
+    if (!session) return c.json({ error: 'session not found' }, 404)
+
+    const gen = authoring.iterate(
+      { sessionId: body.sessionId, message: body.message, selection: body.selection },
+      { ...authoringDeps(c.req.raw.signal), session },
+    )
+    return streamGeneration(c, gen, async (e) => {
+      if (e.type === 'gameReady') {
+        await deps.store.appendTurn(session.id, { message: body.message, def: e.def })
+        if (session.projectId) await deps.store.addVersion(session.projectId, e.def, body.message)
+      }
+    })
   })
 
   // Static tile/bg/shared PNGs. Path-traversal guarded (stays within assetRoot).

@@ -37,6 +37,13 @@ export class MemoryStore implements Store {
     this.persist()
   }
 
+  async setSessionProject(id: string, projectId: string): Promise<void> {
+    const s = this.sessions.get(id)
+    if (!s) throw new Error(`session ${id} not found`)
+    s.projectId = projectId
+    this.persist()
+  }
+
   async appendTurn(id: string, turn: { message: string; def: GameDefinition }): Promise<void> {
     const s = this.sessions.get(id)
     if (!s) throw new Error(`session ${id} not found`)

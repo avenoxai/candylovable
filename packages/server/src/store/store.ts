@@ -13,6 +13,8 @@ export interface Session {
   createdAt: number
   currentDef?: GameDefinition
   history: IterateTurn[]
+  /** The project this session persists versions into (set once `generate` finalizes). */
+  projectId?: string
 }
 
 /** A saved project (the unit the FE lists + version-controls). */
@@ -48,6 +50,7 @@ export interface Store {
   createSession(): Promise<Session>
   getSession(id: string): Promise<Session | null>
   setSessionDef(id: string, def: GameDefinition): Promise<void>
+  setSessionProject(id: string, projectId: string): Promise<void>
   appendTurn(id: string, turn: { message: string; def: GameDefinition }): Promise<void>
 
   createProject(

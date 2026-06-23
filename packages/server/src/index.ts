@@ -4,10 +4,14 @@
  * project/version/session persistence + an ad-hoc `/api/validate` over the engine oracle.
  *
  * Plan: reports/backend-plan.md · decisions: reports/decisions-backend.md.
- * STATUS: P4 — Hono app + serving (health/library/themes/assets/validate) + Store
- * (Memory + JsonFile). Generate/iterate SSE on FakeAuthoring next (P5).
+ * STATUS: P5 — generate/iterate SSE mounted on the AuthoringPort (FakeAuthoring stand-in,
+ * BE-D10) with session/project/version persistence. Serving + Store from P4. Projects/
+ * versions read+restore routes (P6) and real-authoring wiring (P8) next.
  */
 export * from './app'
+export * from './authoring'
+export * from './fake-authoring'
+export * from './sse'
 export * from './config'
 export * from './library'
 export * from './store/store'
