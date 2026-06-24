@@ -31,9 +31,12 @@ export class PixiScene implements Scene {
   private readonly tiles = new Map<number, TileSprite>()
   private readonly tweener = new Tweener()
   private readonly backgroundColor: number
+  private readonly backgroundUrl?: string
+  private bgSprite?: Sprite
 
-  constructor(opts: { backgroundColor?: string } = {}) {
+  constructor(opts: { backgroundColor?: string; backgroundUrl?: string } = {}) {
     this.backgroundColor = opts.backgroundColor ? safeColor(opts.backgroundColor, 0x16140f) : 0x16140f
+    this.backgroundUrl = opts.backgroundUrl
   }
 
   /**
@@ -60,6 +63,25 @@ export class PixiScene implements Scene {
     app.stage.addChild(this.fx)
     app.ticker.add((t) => this.tweener.update(t.deltaMS))
     this.app = app
+    // The theme background image (drawn behind the board); solid backgroundColor
+    // shows until it loads, and remains as the fallback if the load fails.
+    if (this.backgroundUrl) this.loadBackground(this.backgroundUrl)
+  }
+
+  private loadBackground(url: string): void {
+    void Assets.load<Texture>(url)
+      .then((texture) => {
+        const app = this.app
+        if (!app || app.stage.destroyed) return
+        const sprite = new Sprite(texture)
+        sprite.width = app.renderer.width
+        sprite.height = app.renderer.height
+        app.stage.addChildAt(sprite, 0) // behind board + fx
+        this.bgSprite = sprite
+      })
+      .catch(() => {
+        /* keep the solid backgroundColor fallback */
+      })
   }
 
   private fill(colorId: number): number {
@@ -68,6 +90,10 @@ export class PixiScene implements Scene {
 
   resize(width: number, height: number): void {
     this.app?.renderer.resize(width, height)
+    if (this.bgSprite) {
+      this.bgSprite.width = width
+      this.bgSprite.height = height
+    }
   }
 
   addTile(tile: TileView, dropIn?: { fromY: number; durationMs: number }): void {
@@ -131,11 +157,25 @@ export class PixiScene implements Scene {
       this.tweener.to(asScale(t.container), { x: peak, y: peak }, durationMs * 0.4, easeOutCubic, () => {
         this.tweener.to(asScale(t.container), { x: 0, y: 0 }, durationMs * 0.6, easeOutCubic)
         this.tweener.to(asAlpha(t.container), { alpha: 0 }, durationMs * 0.6, easeOutCubic, () => {
-          t.container.destroy()
-          this.tiles.delete(id)
+          this.destroyTile(id, t)
         })
       })
     }
+  }
+
+  private cancelDisplayTweens(container: Container): void {
+    this.tweener.cancel(asXY(container))
+    this.tweener.cancel(asScale(container))
+  }
+
+  private destroyDisplay(container: Container): void {
+    this.cancelDisplayTweens(container)
+    container.destroy()
+  }
+
+  private destroyTile(id: number, t: TileSprite): void {
+    this.destroyDisplay(t.container)
+    this.tiles.delete(id)
   }
 
   setSpecial(id: number, _special: string): void {
@@ -158,7 +198,7 @@ export class PixiScene implements Scene {
       const angle = Math.random() * Math.PI * 2
       const dist = 20 + Math.random() * 40
       this.tweener.to(asXY(p), { x: x + Math.cos(angle) * dist, y: y + Math.sin(angle) * dist }, 320, easeOutCubic)
-      this.tweener.to(asAlpha(p), { alpha: 0 }, 320, easeOutCubic, () => p.destroy())
+      this.tweener.to(asAlpha(p), { alpha: 0 }, 320, easeOutCubic, () => this.destroyDisplay(p))
     }
   }
 
@@ -180,7 +220,7 @@ export class PixiScene implements Scene {
     text.y = y
     this.fx.addChild(text)
     this.tweener.to(asXY(text), { y: y - 40 }, 700, easeOutCubic)
-    this.tweener.to(asAlpha(text), { alpha: 0 }, 700, easeOutCubic, () => text.destroy())
+    this.tweener.to(asAlpha(text), { alpha: 0 }, 700, easeOutCubic, () => this.destroyDisplay(text))
   }
 
   banner(kind: 'win' | 'lose' | 'shuffle', detail: { stars?: number; nearMiss?: boolean }): void {

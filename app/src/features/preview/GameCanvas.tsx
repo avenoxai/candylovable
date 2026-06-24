@@ -27,7 +27,11 @@ export const GameCanvas = ({ def }: { def: GameDefinition }) => {
     void (async () => {
       try {
         const { PixiScene } = await import('@candylovable/game-runtime/pixi')
-        const pixi = new PixiScene({ backgroundColor: def.theme.backdropColor })
+        const { assetBaseUrl, background, backdropColor } = def.theme
+        const backgroundUrl = background
+          ? `${assetBaseUrl.replace(/\/+$/, '')}/${background.replace(/^\/+/, '')}`
+          : undefined
+        const pixi = new PixiScene({ backgroundColor: backdropColor, backgroundUrl })
         await pixi.init(host, SIZE, SIZE)
         if (disposed) {
           pixi.destroy()
