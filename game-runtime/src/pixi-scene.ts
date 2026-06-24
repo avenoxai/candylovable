@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Text } from 'pixi.js'
+import { Application, Assets, Color, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js'
 import type { Scene, TileView } from './scene'
 import { Tweener, easeOutBack, easeOutCubic } from './tween'
 
@@ -80,8 +80,29 @@ export class PixiScene implements Scene {
     gfx.roundRect(-s / 2 + s * 0.15, -s / 2 + s * 0.12, s * 0.4, s * 0.2, s * 0.1).fill({ color: 0xffffff, alpha: 0.25 })
     container.addChild(gfx)
     this.board.addChild(container)
-    this.tiles.set(tile.id, { container, gfx })
+    const entry: TileSprite = { container, gfx }
+    this.tiles.set(tile.id, entry)
+    // The colored rect renders instantly as a fallback; the real sprite swaps in once loaded.
+    if (tile.texUrl) this.loadSprite(tile.id, entry, tile.texUrl, s)
     if (dropIn) this.tweener.to(asXY(container), { y: tile.y }, dropIn.durationMs, easeOutBack)
+  }
+
+  /** Load the theme sprite and replace the placeholder rect; on failure the rect stays. */
+  private loadSprite(id: number, entry: TileSprite, url: string, size: number): void {
+    void Assets.load<Texture>(url)
+      .then((texture) => {
+        // The tile may have been popped/replaced while the texture was loading.
+        if (this.tiles.get(id) !== entry || entry.container.destroyed) return
+        const sprite = new Sprite(texture)
+        sprite.anchor.set(0.5)
+        sprite.width = size
+        sprite.height = size
+        entry.container.addChildAt(sprite, 0)
+        entry.gfx.visible = false
+      })
+      .catch(() => {
+        /* keep the colored-rect fallback */
+      })
   }
 
   moveTile(id: number, x: number, y: number, durationMs: number, bounce: boolean): void {

@@ -58,6 +58,14 @@ export class BoardController {
     return this.def.theme.palette[colorId] ?? '#ffffff'
   }
 
+  /** Resolve the theme sprite URL for a colorId (`assetBaseUrl` + the tile's `file`). */
+  private texUrl(colorId: number): string | undefined {
+    const tile = this.def.theme.tiles.find((t) => t.colorId === colorId)
+    if (!tile) return undefined
+    const base = this.def.theme.assetBaseUrl.replace(/\/+$/, '')
+    return `${base}/${tile.file.replace(/^\/+/, '')}`
+  }
+
   /** Seed from the engine's initial state: draw every tile. */
   seed(state: GameState): void {
     this.scene.reset() // clear any prior sprites so re-seeding (e.g. after reset) is safe
@@ -79,6 +87,7 @@ export class BoardController {
           x: px,
           y: py,
           size: this.layout.cellSize,
+          texUrl: this.texUrl(cell.colorId),
         })
       }
     }
@@ -184,7 +193,15 @@ export class BoardController {
       const { px, py } = this.center(at)
       const startY = this.layout.originY - (at.y + 1) * (this.layout.cellSize + this.layout.gap)
       this.scene.addTile(
-        { id: tile.id, colorId: tile.colorId, special: tile.special, x: px, y: py, size: this.layout.cellSize },
+        {
+          id: tile.id,
+          colorId: tile.colorId,
+          special: tile.special,
+          x: px,
+          y: py,
+          size: this.layout.cellSize,
+          texUrl: this.texUrl(tile.colorId),
+        },
         { fromY: startY, durationMs: dur },
       )
     }

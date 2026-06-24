@@ -9,6 +9,8 @@ export interface TileView {
   x: number
   y: number
   size: number
+  /** Theme sprite URL. Drawn as the tile art; falls back to a colored tile if absent or it fails to load. */
+  texUrl?: string
 }
 
 /**
