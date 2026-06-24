@@ -35,14 +35,24 @@ export class Tweener {
     ease: Ease = easeOutCubic,
     onComplete?: () => void,
   ): void {
+    const keys = Object.keys(to)
+    this.cancel(obj, keys)
     if (durationMs <= 0) {
       Object.assign(obj, to)
       onComplete?.()
       return
     }
     const from: Record<string, number> = {}
-    for (const k of Object.keys(to)) from[k] = obj[k] ?? 0
+    for (const k of keys) from[k] = obj[k] ?? 0
     this.tweens.push({ obj, from, to, elapsed: 0, duration: durationMs, ease, onComplete })
+  }
+
+  /** Remove queued tweens for `obj` without firing completion callbacks. */
+  cancel(obj: Record<string, number>, keys?: readonly string[]): void {
+    const keySet = keys ? new Set(keys) : null
+    this.tweens = this.tweens.filter(
+      (tw) => tw.obj !== obj || (keySet !== null && !Object.keys(tw.to).some((k) => keySet.has(k))),
+    )
   }
 
   update(dtMs: number): void {

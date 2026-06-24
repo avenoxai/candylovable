@@ -53,12 +53,11 @@ export const Workspace = ({ generate }: { generate?: GenerationStreamFn } = {}) 
           context={selected}
           onClearContext={clearSelection}
         />
-        <main
-          className="flex flex-1 flex-col items-center justify-center gap-4 overflow-auto p-6"
-          aria-label="live preview"
-        >
-          <GameCanvas def={current} />
-          <EditableElements def={current} />
+        <main className="min-h-0 flex-1 overflow-auto p-6" aria-label="live preview">
+          <div className="flex min-h-full flex-col items-center justify-center gap-4">
+            <GameCanvas def={current} />
+            <EditableElements def={current} />
+          </div>
         </main>
         <AuthorPanel />
       </div>

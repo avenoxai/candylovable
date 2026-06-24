@@ -113,8 +113,8 @@ export const ActionTimeline = ({
         </ol>
 
         {state.text && (
-          <p className="text-sm text-muted">
-            {state.text}
+          <p className="whitespace-pre-line text-sm text-muted">
+            {state.text.trimEnd()}
             {streaming && (
               <motion.span
                 aria-hidden

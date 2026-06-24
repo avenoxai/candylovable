@@ -1,6 +1,6 @@
 import type { GameDefinition, GenerationEvent } from '@candylovable/contract'
 import type { AssetCatalog } from '../assets/catalog'
-import type { ChatMessage, DeepSeekClient, ModelTier } from '../llm/client'
+import type { ChatMessage, DeepSeekClient, ModelTier, ToolCall } from '../llm/client'
 import { costUSD } from '../obs/cost'
 import type { StepLogger } from '../obs/logger'
 import { type FrozenPrefix, assembleRequest } from '../prompts/assemble'
@@ -42,6 +42,93 @@ const STEP_KIND: Record<string, 'design' | 'rules' | 'level' | 'theme' | 'asset'
   validate_asset_refs: 'asset',
 }
 
+const cleanLabel = (name: string): string => name.replaceAll('_', ' ')
+
+const argString = (args: Record<string, unknown>, key: string): string | undefined =>
+  typeof args[key] === 'string' ? args[key] : undefined
+
+const argNumber = (args: Record<string, unknown>, key: string): number | undefined =>
+  typeof args[key] === 'number' ? args[key] : undefined
+
+const toolLabel = (call: ToolCall): string => {
+  const args = call.arguments
+  switch (call.name) {
+    case 'select_theme':
+      return `Choosing ${argString(args, 'theme') ?? 'the'} theme`
+    case 'set_meta':
+      return `Naming ${argString(args, 'title') ?? 'the game'}`
+    case 'set_board': {
+      const w = argNumber(args, 'width')
+      const h = argNumber(args, 'height')
+      return w && h ? `Building a ${w}×${h} board` : 'Building the board'
+    }
+    case 'set_rules':
+      return 'Tuning match rules'
+    case 'author_level': {
+      const index = argNumber(args, 'index')
+      return `Designing level ${index === undefined ? '' : index + 1}`.trim()
+    }
+    case 'set_juice':
+      return 'Tuning game feel'
+    case 'validate_game':
+      return 'Validating the game'
+    case 'finalize':
+      return 'Finalizing the game'
+    default:
+      return cleanLabel(call.name)
+  }
+}
+
+const toolNarration = (call: ToolCall): string => {
+  const args = call.arguments
+  switch (call.name) {
+    case 'propose_design_directions':
+      return "I’m sketching a few directions before committing to one.\n"
+    case 'list_themes':
+      return "I’m checking which visual themes are available.\n"
+    case 'get_theme_assets':
+      return `I’m checking the ${argString(args, 'theme') ?? 'selected'} asset set so the game uses real art.\n`
+    case 'list_shared':
+      return "I’m checking shared effects and blockers I can reuse.\n"
+    case 'validate_asset_refs':
+      return "I’m verifying that every asset reference exists in the library.\n"
+    case 'select_theme':
+      return `I’m choosing the ${argString(args, 'theme') ?? 'best'} theme and wiring its tile art.\n`
+    case 'set_meta':
+      return `I’m naming the game${argString(args, 'title') ? ` “${argString(args, 'title')}”` : ''}.\n`
+    case 'set_board': {
+      const w = argNumber(args, 'width')
+      const h = argNumber(args, 'height')
+      return w && h ? `I’m setting up a ${w}×${h} match-3 board.\n` : "I’m setting up the match-3 board.\n"
+    }
+    case 'set_rules':
+      return "I’m tuning the match rules, scoring, and special-piece behavior.\n"
+    case 'author_level': {
+      const index = argNumber(args, 'index')
+      const goal = typeof args.goal === 'object' && args.goal !== null ? (args.goal as Record<string, unknown>) : {}
+      const kind = typeof goal.kind === 'string' ? goal.kind : 'goal'
+      const target = typeof goal.target === 'number' ? ` target ${goal.target}` : ''
+      const moves = argNumber(args, 'moveLimit')
+      const moveText = moves === undefined ? '' : ` in ${moves} moves`
+      return `I’m designing level ${index === undefined ? '' : index + 1}: ${kind}${target}${moveText}.\n`
+    }
+    case 'simulate_level': {
+      const index = argNumber(args, 'index')
+      return `I’m checking level ${index === undefined ? '' : index + 1} has a playable opening.\n`
+    }
+    case 'set_juice':
+      return "I’m tuning particles, shake, and squash so clears feel satisfying.\n"
+    case 'validate_game':
+      return "I’m validating the draft before publishing it.\n"
+    case 'request_asset':
+      return "I’m requesting a missing asset instead of inventing one.\n"
+    case 'finalize':
+      return "I’m assembling the final playable game now.\n"
+    default:
+      return `I’m running ${cleanLabel(call.name)}.\n`
+  }
+}
+
 /**
  * The generate pipeline: a pro tool-calling loop that drives the standardized tools to
  * assemble a GameDefinition, streaming {@link GenerationEvent}s. Repair is inherent — a failed
@@ -61,6 +148,7 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
   const messages: ChatMessage[] = [{ role: 'user', content: prompt }]
 
   yield ev.plan(['select theme', 'set rules', 'author levels', 'validate', 'finalize'])
+  yield ev.token("I’ll build this with tools and narrate the key choices as I go.\n")
 
   let finalized: GameDefinition | undefined
   let stepIndex = 0
@@ -100,10 +188,12 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
     }
     noToolStreak = 0
 
+    if (result.content.trim()) yield ev.token(`${result.content.trim()}\n`)
     // Record the assistant's tool calls BEFORE their results (OpenAI/DeepSeek protocol).
     messages.push({ role: 'assistant', content: result.content, toolCalls: result.toolCalls })
 
     for (const call of result.toolCalls) {
+      yield ev.token(toolNarration(call))
       let res: ToolResult
       try {
         const tool = tools.get(call.name)
@@ -114,7 +204,7 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
         res = fail(`tool ${call.name} failed: ${e instanceof Error ? e.message : String(e)}`)
       }
       deps.onTool?.(call.name, res.ok, res.ok ? undefined : res.errors)
-      yield ev.step(call.name, call.name, 'done', STEP_KIND[call.name] ?? 'design')
+      yield ev.step(call.name, toolLabel(call), 'done', STEP_KIND[call.name] ?? 'design')
       if (Object.keys(ctx.draft.def).length > 0) yield ev.partial(ctx.draft.def)
       if (call.name === 'finalize' && res.ok) finalized = res.data as GameDefinition
       messages.push({ role: 'tool', content: JSON.stringify(res), toolCallId: call.id })

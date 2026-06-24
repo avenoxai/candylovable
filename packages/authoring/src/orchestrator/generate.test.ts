@@ -90,6 +90,19 @@ describe('generate (scripted bench — the P3 eval checkpoint)', () => {
     expect(logger.records().every((r) => r.model === 'pro')).toBe(true)
   })
 
+  it('streams human-readable assistant narration for tool-only DeepSeek turns', async () => {
+    const { events } = await generateToCompletion('make a candy match-3, juicy', {
+      client: new FakeDeepSeek(idealScript()),
+      proPrefix: prefix(),
+      catalog: candyCatalog(),
+    })
+    const text = events.map((e) => (e.type === 'token' ? e.text : '')).join('')
+    expect(text).toContain('I’ll build this with tools')
+    expect(text).toContain('I’m choosing the candy theme')
+    expect(text).toContain('I’m designing level 1')
+    expect(text).toContain('I’m assembling the final playable game now.')
+  })
+
   it('emits a recoverable=false error when the model never produces a valid game', async () => {
     const events = []
     for await (const e of generate('x', {

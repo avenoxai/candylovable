@@ -166,6 +166,7 @@ export class PixiScene implements Scene {
   private cancelDisplayTweens(container: Container): void {
     this.tweener.cancel(asXY(container))
     this.tweener.cancel(asScale(container))
+    this.tweener.cancel(asAlpha(container))
   }
 
   private destroyDisplay(container: Container): void {
