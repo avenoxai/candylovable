@@ -1,6 +1,6 @@
 import type { GameDefinition, GenerationEvent } from '@candylovable/contract'
 import type { AssetCatalog } from '../assets/catalog'
-import type { ChatMessage, DeepSeekClient } from '../llm/client'
+import type { ChatMessage, DeepSeekClient, ModelTier } from '../llm/client'
 import { costUSD } from '../obs/cost'
 import type { StepLogger } from '../obs/logger'
 import { type FrozenPrefix, assembleRequest } from '../prompts/assemble'
@@ -14,6 +14,10 @@ export interface GenerateDeps {
   client: DeepSeekClient
   /** The frozen pro prefix (system + tools), byte-stable across calls. */
   proPrefix: FrozenPrefix
+  /** Model tier to run; defaults to 'pro'. */
+  tier?: ModelTier
+  /** Prefix matching {@link tier}; defaults to {@link proPrefix}. Pass the flash prefix to run flash. */
+  prefix?: FrozenPrefix
   catalog?: AssetCatalog
   makeEngine?: EngineFactory
   logger?: StepLogger
@@ -47,6 +51,8 @@ const STEP_KIND: Record<string, 'design' | 'rules' | 'level' | 'theme' | 'asset'
  */
 export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenerator<GenerationEvent> {
   const { client, proPrefix, catalog, makeEngine, logger } = deps
+  const tier = deps.tier ?? 'pro'
+  const prefix = deps.prefix ?? proPrefix
   const clock = deps.clock ?? (() => 0)
   const maxRounds = deps.maxRounds ?? 36
   const runId = deps.runId ?? 'run'
@@ -63,7 +69,7 @@ export async function* generate(prompt: string, deps: GenerateDeps): AsyncGenera
   for (let round = 0; round < maxRounds && !finalized; round++) {
     if (deps.signal?.aborted) return // client disconnected — stop streaming
     const startedAt = clock()
-    const result = await client.chat(assembleRequest('pro', proPrefix, { messages }))
+    const result = await client.chat(assembleRequest(tier, prefix, { messages }))
 
     logger?.log({
       runId,
